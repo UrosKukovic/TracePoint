@@ -1,8 +1,16 @@
+using TracePoint.Api.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+// SignalR
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -32,6 +40,9 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+// Register TelemetryHub
+app.MapHub<TelemetryHub>("/telemetryHub");
 
 app.Run();
 
