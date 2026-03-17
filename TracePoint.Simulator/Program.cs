@@ -3,7 +3,6 @@ using TracePoint.Shared;
 
 Console.WriteLine("=== TracePoint Hardware Simulator ===");
 
-// 1. Povezava na tvoj API (preveri port, ki ga uporablja tvoj TracePoint.Api!)
 var connection = new HubConnectionBuilder()
     .WithUrl("http://localhost:5247/telemetryHub") // Prilagodi port (poglej v launchSettings.json od Api-ja)
     .WithAutomaticReconnect()

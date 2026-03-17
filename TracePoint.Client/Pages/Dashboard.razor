@@ -1,0 +1,46 @@
+@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@using TracePoint.Shared
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<MudText Typo="Typo.h4" GutterBottom="true">TracePoint Live Dashboard</MudText>
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6">Zadnja vrednost</MudText>
+            <MudText Typo="Typo.h2" Color="Color.Primary">@_lastMeasurement?.Value</MudText>
+            <MudText Typo="Typo.caption">ID: 0x@_lastMeasurement?.CanId.ToString("X")</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private HubConnection? _hubConnection;
+    private CanMeasurementDto? _lastMeasurement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("http://localhost:5247/telemetryHub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<CanMeasurementDto>("ReceiveMeasurement", (measurement) =>
+        {
+            _lastMeasurement = measurement;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TracePoint.Simulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d0b9029ddcfe8b28813d2cec2e3e560edaf427ff")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3b514108912b71eaae9c422fa0aa7767c790ee7")]
 [assembly: System.Reflection.AssemblyProductAttribute("TracePoint.Simulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TracePoint.Simulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
