@@ -1,0 +1,6 @@
+@TracePoint.Api_HostAddress = http://localhost:5247
+
+GET {{TracePoint.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

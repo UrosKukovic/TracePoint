@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="TracePoint.Api/TracePoint.Api.csproj" />
+  <Project Path="TracePoint.Client/TracePoint.Client.csproj" />
+  <Project Path="TracePoint.Shared/TracePoint.Shared.csproj" />
+</Solution>
