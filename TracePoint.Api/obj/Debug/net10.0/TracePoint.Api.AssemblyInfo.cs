@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TracePoint.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3b514108912b71eaae9c422fa0aa7767c790ee7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+984817e910ca1c1b7635c2e4bbaf1b860667b904")]
 [assembly: System.Reflection.AssemblyProductAttribute("TracePoint.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TracePoint.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

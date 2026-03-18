@@ -5,7 +5,7 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "TracePoint.Client",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-MeBqNKnXSvkS1HGaj/26dsn03C8UiUTuuWnALVi1hdw=",
+    "hash": "sha256-IxY/VGlDfSARgnegPsIM9UVuo0fSdAj9KzVmEbA5qYM=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.69poregybn.js"
@@ -1314,28 +1314,28 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
       },
       {
         "virtualPath": "TracePoint.Shared.wasm",
-        "name": "TracePoint.Shared.hzg8m724w6.wasm",
-        "integrity": "sha256-A4aM7zYx1pv3hXtcQkkRA2mM2TNPoKZXHN1sctJ//1k=",
+        "name": "TracePoint.Shared.ayk4so26i5.wasm",
+        "integrity": "sha256-Et/J9PQPColqJRKbYrzJvx2VCZh90WomvBKi65I2EDc=",
         "cache": "force-cache"
       },
       {
         "virtualPath": "TracePoint.Client.wasm",
-        "name": "TracePoint.Client.x0yb6mouvf.wasm",
-        "integrity": "sha256-AV9soxHXRBpCXBmao2Ji8H+UbxCyLag2AnS2T0I0KqM=",
+        "name": "TracePoint.Client.13j22hbfl5.wasm",
+        "integrity": "sha256-45zR4msIBlr/gC3t+Ylm7pwc0Rq+vHfkvJIK7z5galM=",
         "cache": "force-cache"
       }
     ],
     "pdb": [
       {
         "virtualPath": "TracePoint.Shared.pdb",
-        "name": "TracePoint.Shared.mx8guss58n.pdb",
-        "integrity": "sha256-Ol8X5JwsAmxSLKvTgEl8eRk7qOVSSz4tJ4ylcdf1boQ=",
+        "name": "TracePoint.Shared.ykr0hpzgbf.pdb",
+        "integrity": "sha256-onBoQwErCJ4PUtaNZDJnsny3gPUiHuIMravCYCo1X0g=",
         "cache": "force-cache"
       },
       {
         "virtualPath": "TracePoint.Client.pdb",
-        "name": "TracePoint.Client.6r9nsx7md7.pdb",
-        "integrity": "sha256-IkGZ+tRa5IJWjXFAjqMJMK96/mf9NJ4F3YtC/mIVDUo=",
+        "name": "TracePoint.Client.ueqvxw45hn.pdb",
+        "integrity": "sha256-iqd2WW2DKQfa7PykulhNl/yymL+PlI8s5nKaU3ySXls=",
         "cache": "force-cache"
       }
     ],

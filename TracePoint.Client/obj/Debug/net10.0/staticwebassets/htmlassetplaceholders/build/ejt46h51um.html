@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TracePoint.Client</title>
     <base href="/" />
-    <link href="_framework/dotnet.go8ehq79ov.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-kNOv51+gxOCsoVanErFYY8OQDijizK9qERYLIPSnA5E=" />
+    <link href="_framework/dotnet.pl1yvshbxj.js" rel="preload" as="script" fetchpriority="high" crossorigin="anonymous" integrity="sha256-nXtW2IJCxZt6uluHhrmU7/zmtnKd+W/M5f9dGpXeK0w=" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <link href="TracePoint.Client.styles.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_content/Plotly.Blazor/plotly-latest.min.js"></script>
     <script type="importmap">{
   "imports": {
     "./_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/Microsoft.DotNet.HotReload.WebAssembly.Browser.lib.module.js": "./_content/Microsoft.DotNet.HotReload.WebAssembly.Browser/Microsoft.DotNet.HotReload.WebAssembly.Browser.99zm1jdh75.lib.module.js",
@@ -22,8 +22,8 @@
     "./_content/Plotly.Blazor/plotly-basic-3.3.1.min.js": "./_content/Plotly.Blazor/plotly-basic-3.3.1.min.0sc788n9sx.js",
     "./_content/Plotly.Blazor/plotly-interop-7.0.0.js": "./_content/Plotly.Blazor/plotly-interop-7.0.0.vkxxvg2117.js",
     "./_framework/blazor.webassembly.js": "./_framework/blazor.webassembly.66stpp682q.js",
-    "./_framework/dotnet.js": "./_framework/dotnet.go8ehq79ov.js",
     "./_framework/dotnet.native.js": "./_framework/dotnet.native.69poregybn.js",
+    "./_framework/dotnet.js": "./_framework/dotnet.pl1yvshbxj.js",
     "./_framework/dotnet.runtime.js": "./_framework/dotnet.runtime.q5rqv3xrhm.js",
     "./lib/bootstrap/dist/js/bootstrap.bundle.js": "./lib/bootstrap/dist/js/bootstrap.bundle.502m6fwtkt.js",
     "./lib/bootstrap/dist/js/bootstrap.bundle.min.js": "./lib/bootstrap/dist/js/bootstrap.bundle.min.493y06b0oq.js",
@@ -46,10 +46,10 @@
     "./_content/Plotly.Blazor/plotly-interop-7.0.0.vkxxvg2117.js": "sha256-wbh5rgVnbH+Y9LKZ+s5LKW/5iAJBaxCrKvXE2tV8cTI=",
     "./_framework/blazor.webassembly.66stpp682q.js": "sha256-3lCWrko3zwspV40aQhs2S/IMkRSarnHRKIdkHhuXIBA=",
     "./_framework/blazor.webassembly.js": "sha256-3lCWrko3zwspV40aQhs2S/IMkRSarnHRKIdkHhuXIBA=",
-    "./_framework/dotnet.go8ehq79ov.js": "sha256-kNOv51+gxOCsoVanErFYY8OQDijizK9qERYLIPSnA5E=",
-    "./_framework/dotnet.js": "sha256-kNOv51+gxOCsoVanErFYY8OQDijizK9qERYLIPSnA5E=",
+    "./_framework/dotnet.js": "sha256-nXtW2IJCxZt6uluHhrmU7/zmtnKd+W/M5f9dGpXeK0w=",
     "./_framework/dotnet.native.69poregybn.js": "sha256-JvdIvkSF0x6euoPT2QnQSMg2Gyv2oJbFeBi1XmWLYFU=",
     "./_framework/dotnet.native.js": "sha256-JvdIvkSF0x6euoPT2QnQSMg2Gyv2oJbFeBi1XmWLYFU=",
+    "./_framework/dotnet.pl1yvshbxj.js": "sha256-nXtW2IJCxZt6uluHhrmU7/zmtnKd+W/M5f9dGpXeK0w=",
     "./_framework/dotnet.runtime.js": "sha256-ArknccFM1sHNVcih0x1h52AG+abNCoQjl6BlVrv3ePw=",
     "./_framework/dotnet.runtime.q5rqv3xrhm.js": "sha256-ArknccFM1sHNVcih0x1h52AG+abNCoQjl6BlVrv3ePw=",
     "./lib/bootstrap/dist/js/bootstrap.bundle.502m6fwtkt.js": "sha256-pVWQCfa53nlAByCij6UFvw/Pg8Ey+HJvQgCIZhdh89A=",
