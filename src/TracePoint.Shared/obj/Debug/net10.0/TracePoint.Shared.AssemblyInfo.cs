@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TracePoint.Shared")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+216ed3e9e2c7d4fc4fc38ace22c388770dc28fcb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ae0a3fb78807ad5cfeece1d79871976e8bad039d")]
 [assembly: System.Reflection.AssemblyProductAttribute("TracePoint.Shared")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TracePoint.Shared")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

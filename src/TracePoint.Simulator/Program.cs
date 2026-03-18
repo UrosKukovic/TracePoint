@@ -31,7 +31,7 @@ try
         
         Console.WriteLine($"[Sent]: ID: 0x{mockMeasurement.CanId:X} | Value: {mockMeasurement.Value}");
         
-        await Task.Delay(100); // Pošiljanje vsakih 100ms
+        await Task.Delay(100);
     }
 }
 catch (Exception ex)
