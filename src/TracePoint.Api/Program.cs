@@ -1,4 +1,4 @@
-using TracePoint.Api.Hubs;
+using TracePoint.Api.Features.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,14 +9,18 @@ builder.Services.AddOpenApi();
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
+builder.Services.AddSingleton<TelemetryBuffer>();
+
+builder.Services.AddHostedService<DatabaseWorker>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNextJs", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // Next.js default port
+        policy.WithOrigins("http://localhost:3000")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials(); // Nujno za SignalR!
+              .AllowCredentials();
     });
 });
 

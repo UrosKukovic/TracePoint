@@ -31,7 +31,7 @@ try
         
         Console.WriteLine($"[Sent]: ID: 0x{mockMeasurement.CanId:X} | Value: {mockMeasurement.Value}");
         
-        await Task.Delay(100);
+        await Task.Delay(50);
     }
 }
 catch (Exception ex)

@@ -8,6 +8,9 @@ import 'uplot/dist/uPlot.min.css';
 export default function LiveDashboard() {
   const [isConnected, setIsConnected] = useState(false);
   const [lastValue, setLastValue] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
   
   // uPlot potrebuje podatke v formatu [[x1, x2, ...], [y1, y2, ...]]
   const [chartData, setChartData] = useState<[number[], number[]]>([[], []]);
@@ -15,6 +18,7 @@ export default function LiveDashboard() {
   // Ref-i so nujni za hitrost, da ne prožimo renderja ob vsakem bitu podatkov
   const xDataRef = useRef<number[]>([]);
   const yDataRef = useRef<number[]>([]);
+
 
   const options = {
     width: 800,
@@ -43,6 +47,8 @@ export default function LiveDashboard() {
       .withAutomaticReconnect()
       .build();
 
+    connectionRef.current = connection;
+
     connection.start().then(() => setIsConnected(true));
 
     connection.on("ReceiveMeasurement", (msg: any) => {
@@ -69,8 +75,39 @@ export default function LiveDashboard() {
     return () => { connection.stop(); };
   }, []);
 
+  const toggleRecording = async () => {
+    if (!connectionRef.current) return;
+
+    if (!isRecording) {
+      const sessionName = `Test Run - ${new Date().toLocaleTimeString()}`;
+      await connectionRef.current.invoke("StartRecording", sessionName);
+      setIsRecording(true);
+    } else {
+      await connectionRef.current.invoke("StopRecording");
+      setIsRecording(false);
+    }
+  };
+
   return (
     <div className="p-8 bg-slate-950 min-h-screen text-white">
+
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-bold">TracePoint Live Stream</h1>
+        
+        {/* 3. Gumb za snemanje */}
+        <button
+          onClick={toggleRecording}
+          disabled={!isConnected}
+          className={`px-6 py-2 rounded-lg font-bold transition-all ${
+            isRecording 
+              ? "bg-red-600 hover:bg-red-700 animate-pulse" 
+              : "bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700"
+          }`}
+        >
+          {isRecording ? "🔴 STOP RECORDING" : "⏺ START RECORDING"}
+        </button>
+      </div>
+
       <h1 className="text-xl mb-4">TracePoint High-Performance Stream</h1>
       
       <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 inline-block mb-6">

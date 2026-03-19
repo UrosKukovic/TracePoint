@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "YCmOcYxYAC4=",
+  "dgSpecHash": "2uQMnngcn48=",
   "success": true,
   "projectFilePath": "/home/uros/Documents/projects/TracePoint/src/TracePoint.Api/TracePoint.Api.csproj",
   "expectedPackageFiles": [
+    "/home/uros/.nuget/packages/dapper/2.1.72/dapper.2.1.72.nupkg.sha512",
     "/home/uros/.nuget/packages/mediatr/14.1.0/mediatr.14.1.0.nupkg.sha512",
     "/home/uros/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
     "/home/uros/.nuget/packages/microsoft.aspnetcore.openapi/10.0.3/microsoft.aspnetcore.openapi.10.0.3.nupkg.sha512",
