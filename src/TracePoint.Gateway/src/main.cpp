@@ -14,7 +14,7 @@ const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use you
 // MQTT config
 const char* MQTT_SERVER = "PC_IP";
 const uint16_t MQTT_PORT = 1883;
-const char* MQTT_TOPIC = "telemetry/batch";
+const char* MQTT_TOPIC = "telemetry/binary";
 
 // Pins for ESP32-S3 N8R8
 #define CAN_TX_PIN GPIO_NUM_5
@@ -162,7 +162,7 @@ void sendBatch()
     const uint8_t* payload = reinterpret_cast<const uint8_t*>(batchBuffer.data());
 
     // Pošljemo surove bajte neposredno iz pomnilnika
-    if (mqttClient.publish("telemetry/binary", payload, packetSize))
+    if (mqttClient.publish(MQTT_TOPIC, payload, packetSize))
     {
         Serial.printf("MQTT Binary: Sent %d frames\n", batchBuffer.size());
         batchBuffer.clear();

@@ -15,8 +15,10 @@ public struct TelemetryFrameProxy
     public long TimestampMs;  // 8 bajtov
 }
 
+
 public class MqttBridgeWorker : BackgroundService
 {
+    const string MQTT_TOPIC = "telemetry/binary";
     private readonly IHubContext<TelemetryHub> _hubContext;
     private readonly TelemetryBuffer _buffer;
     private readonly ILogger<MqttBridgeWorker> _logger;
@@ -86,7 +88,7 @@ public class MqttBridgeWorker : BackgroundService
             await mqttClient.ConnectAsync(mqttClientOptions, stoppingToken);
 
             var topicFilter = _mqttFactory.CreateTopicFilterBuilder()
-                .WithTopic("telemetry/batch")
+                .WithTopic(MQTT_TOPIC)
                 .WithAtLeastOnceQoS()
                 .Build();
 
