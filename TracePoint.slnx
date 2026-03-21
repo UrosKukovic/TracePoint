@@ -2,4 +2,5 @@
   <Project Path="TracePoint.Api/TracePoint.Api.csproj" />
   <Project Path="TracePoint.Client/TracePoint.Client.csproj" />
   <Project Path="TracePoint.Shared/TracePoint.Shared.csproj" />
+  <Project Path="TracePoint.Simulator/TracePoint.Simulator.csproj" />
 </Solution>
