@@ -41,36 +41,36 @@ void setup() {
 void loop() {
     static uint32_t lastStamp = 0;
     
-    if (millis() - lastStamp > 100) {
+    // Maintain the 1-second interval
+    if (millis() - lastStamp > 500) {
         lastStamp = millis();
 
         CanFrame testFrame = {0};
-        testFrame.identifier = 0x101; 
+        
+        // 1. Randomize the ID (Standard 11-bit range: 0x100 to 0x7FF)
+        testFrame.identifier = random(0x100, 0x7FF); 
         testFrame.extd = 0;
         testFrame.data_length_code = 8;
         
+        // 2. Fill with random bytes
         for(int i = 0; i < 8; i++) {
-            testFrame.data[i] = 0xAA;
+            testFrame.data[i] = (uint8_t)random(0, 256);
         }
-        testFrame.data[0] = 0xDE;
-        testFrame.data[1] = 0xAD;
 
-        // turn on green led
+        // Logic for LEDs remains untouched as requested
         pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
         pixels.show();
 
         if (ESP32Can.writeFrame(testFrame, 1)) {
-            Serial.println("SENDER: Frame sent successfully (0x101)");
+            Serial.printf("SENDER: Frame sent (ID: 0x%X | Data[0]: 0x%02X)\n", 
+                          testFrame.identifier, testFrame.data[0]);
 
-            // Comm success
             delay(50); 
             pixels.setPixelColor(0, pixels.Color(0, 0, 0));
             pixels.show();
         } 
         else {
             Serial.println("SENDER: Send failed!");
-            
-            // Error (turn on white led)
             pixels.setPixelColor(0, pixels.Color(255, 255, 255)); 
             pixels.show();
         }

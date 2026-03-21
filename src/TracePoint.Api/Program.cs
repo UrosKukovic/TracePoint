@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.SignalR;
+
 using TracePoint.Api.Features.Telemetry;
+using TracePoint.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +30,7 @@ builder.Services.AddCors(options =>
 // SignalR
 builder.Services.AddSignalR();
 
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -42,9 +46,24 @@ app.UseHttpsRedirection();
 // Register TelemetryHub
 app.MapHub<TelemetryHub>("/telemetryHub");
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+// Endpoint
+// High-performance batch ingestion endpoint
+app.MapPost("/api/telemetry/ingest/batch", async (
+    List<CanMeasurementDto> measurements, 
+    IHubContext<TelemetryHub> hubContext, // Use IHubContext instead of the Hub class
+    TelemetryBuffer buffer) =>            // Inject buffer directly for DB throughput
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    foreach (var m in measurements)
+    {
+        // 1. Broadcast to SignalR clients (Next.js dashboard)
+        await hubContext.Clients.All.SendAsync("ReceiveMeasurement", m);
+
+        // 2. Queue for DatabaseWorker to pick up and save to TimescaleDB
+        buffer.Writer.TryWrite(m);
+    }
+
+    return Results.Accepted();
+})
+.WithDescription("Receives a batch of CAN frames from the ESP32 Gateway.");
+
+app.Run();
