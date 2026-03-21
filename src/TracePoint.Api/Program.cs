@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using MQTTnet;
 
 using TracePoint.Api.Features.Telemetry;
 using TracePoint.Shared;
@@ -16,6 +17,9 @@ builder.Services.AddSingleton<TelemetryBuffer>();
 
 builder.Services.AddHostedService<DatabaseWorker>();
 
+// MQTT
+builder.Services.AddHostedService<MqttBridgeWorker>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNextJs", policy =>
@@ -29,7 +33,6 @@ builder.Services.AddCors(options =>
 
 // SignalR
 builder.Services.AddSignalR();
-
 
 var app = builder.Build();
 

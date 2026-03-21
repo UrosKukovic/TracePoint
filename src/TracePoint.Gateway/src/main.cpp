@@ -1,15 +1,20 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <ArduinoJson.h>
 #include <ESP32-TWAI-CAN.hpp>
 #include <vector>
 #include <Adafruit_NeoPixel.h>
+#include <PubSubClient.h>
 
 // --- Configuration ---
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASS = "WIFI_PASS";
 const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use your PC's IP
+
+// MQTT config
+const char* MQTT_SERVER = "PC_IP";
+const uint16_t MQTT_PORT = 1883;
+const char* MQTT_TOPIC = "telemetry/batch";
 
 // Pins for ESP32-S3 N8R8
 #define CAN_TX_PIN GPIO_NUM_5
@@ -18,13 +23,16 @@ const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use you
 #define NUM_PIXELS 1
 Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
 
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
 // Batching Settings
 const int MAX_BATCH_SIZE = 10;
 const int FLUSH_INTERVAL_MS = 100;
 unsigned long lastFlushTime = 0;
 
 // Data Structure (Matches your CanMeasurementDto)
-struct TelemetryFrame {
+struct __attribute__((packed)) TelemetryFrame {
     uint32_t canId;
     float value;
     long long timestampMs;
@@ -35,6 +43,7 @@ std::vector<TelemetryFrame> batchBuffer;
 // --- Function Prototypes ---
 void connectToWiFi();
 void sendBatch();
+void reconnectMqtt();
 
 void setup()
 {
@@ -51,6 +60,9 @@ void setup()
 
     // 1. Initialize WiFi
     connectToWiFi();
+
+    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+    mqttClient.setBufferSize(4096);
 
     // 2. Initialize CAN Bus
     ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
@@ -72,6 +84,11 @@ void setup()
 
 void loop()
 {
+    if (!mqttClient.connected()) {
+        reconnectMqtt();
+    }
+    mqttClient.loop();
+
     CanFrame rxFrame;
 
     // 3. Read CAN Frames
@@ -134,37 +151,40 @@ void connectToWiFi()
 
 void sendBatch()
 {
-    StaticJsonDocument<2048> doc;
-    JsonArray array = doc.to<JsonArray>();
-
-    for (const auto& m : batchBuffer) 
-    {
-        JsonObject obj = array.createNestedObject();
-        obj["canId"] = m.canId;
-        obj["timestampMs"] = m.timestampMs;
-        obj["value"] = m.value;
-        obj["channel"] = "CAN_BUS_0";
+    if (!mqttClient.connected()) {
+        reconnectMqtt();
     }
 
-    String jsonPayload;
-    serializeJson(doc, jsonPayload);
+    // Izračunamo velikost v bajtih: število elementov * 16 bajtov (velikost strukture)
+    size_t packetSize = batchBuffer.size() * sizeof(TelemetryFrame);
+    
+    // Dobimo kazalec na začetek podatkov v vektorju
+    const uint8_t* payload = reinterpret_cast<const uint8_t*>(batchBuffer.data());
 
-    HTTPClient http;
-    http.begin(API_URL);
-    http.addHeader("Content-Type", "application/json");
-
-    int httpResponseCode = http.POST(jsonPayload);
-
-    if (httpResponseCode == 202)
+    // Pošljemo surove bajte neposredno iz pomnilnika
+    if (mqttClient.publish("telemetry/binary", payload, packetSize))
     {
-        batchBuffer.clear(); // Only clear if API accepted the data
+        Serial.printf("MQTT Binary: Sent %d frames\n", batchBuffer.size());
+        batchBuffer.clear();
+        lastFlushTime = millis();
     }
     else
     {
-        pixels.setPixelColor(0, pixels.Color(255, 0, 0));
-        pixels.show();
-
-        Serial.printf("API Error [%d]: %s\n", httpResponseCode, http.errorToString(httpResponseCode).c_str());
+        Serial.println("MQTT: Publish failed! Preveri 'mqttClient.setBufferSize(4096)' v setupu.");
     }
-    http.end();
+}
+
+void reconnectMqtt() {
+    while (!mqttClient.connected()) {
+        Serial.print("Attempting MQTT connection...");
+        // Poskusi se povezati z unikatnim ID-jem
+        if (mqttClient.connect("TracePoint_Gateway_S3")) {
+            Serial.println("connected");
+        } else {
+            Serial.print("failed, rc=");
+            Serial.print(mqttClient.state());
+            Serial.println(" try again in 2 seconds");
+            delay(2000);
+        }
+    }
 }
