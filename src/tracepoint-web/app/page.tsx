@@ -59,7 +59,7 @@ export default function LiveDashboard() {
       yDataRef.current.push(msg.value);
 
       // 2. KLJUČNO: Omeji dolžino polja (npr. na zadnjih 200 točk)
-      const MAX_POINTS = 50; 
+      const MAX_POINTS = 200; 
       if (xDataRef.current.length > MAX_POINTS) {
         xDataRef.current.shift(); // Odstrani prvo (najstarejšo) X vrednost
         yDataRef.current.shift(); // Odstrani prvo (najstarejšo) Y vrednost

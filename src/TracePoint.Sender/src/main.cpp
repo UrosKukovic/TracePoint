@@ -12,7 +12,10 @@ Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
 
 // Variables for sine wave generation
 float sineAngle = 0;
-const float sineStep = 0.1; 
+const float sineStep = 0.03; 
+
+// Variable to track LED off-time
+uint32_t ledOffMillis = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -45,10 +48,18 @@ void setup() {
 
 void loop() {
     static uint32_t lastStamp = 0;
+    uint32_t currentMillis = millis();
     
-    // Maintain the 1-second interval
-    if (millis() - lastStamp > 10) {
-        lastStamp = millis();
+    // Handle turning the LED off without blocking
+    if (ledOffMillis > 0 && currentMillis >= ledOffMillis) {
+        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+        pixels.show();
+        ledOffMillis = 0; // Reset so we don't keep calling show()
+    }
+
+    // Maintain the 10ms interval (100Hz)
+    if (currentMillis - lastStamp > 5) {
+        lastStamp = currentMillis;
 
         CanFrame testFrame = {0};
         
@@ -68,17 +79,14 @@ void loop() {
             testFrame.data[i] = (uint8_t)random(0, 256);
         }
 
-        // Logic for LEDs remains untouched as requested
-        pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
-        pixels.show();
-
         if (ESP32Can.writeFrame(testFrame, 1)) {
             Serial.printf("SENDER: Frame sent (ID: 0x%X | Sine: %d)\n", 
                           testFrame.identifier, testFrame.data[0]);
 
-            delay(50); 
-            pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+            // Logic for LEDs: Turn ON and set a future time to turn OFF
+            pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
             pixels.show();
+            ledOffMillis = currentMillis + 5; // LED will turn off in 5ms
         } 
         else {
             Serial.println("SENDER: Send failed!");

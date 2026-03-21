@@ -27,9 +27,11 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
 // Batching Settings
-const int MAX_BATCH_SIZE = 10;
+const int MAX_BATCH_SIZE = 1; // pri 10 je imel chart low fps, pri 1 ima velik fps
 const int FLUSH_INTERVAL_MS = 100;
 unsigned long lastFlushTime = 0;
+
+static unsigned long ledOffTime = 0;
 
 // Data Structure (Matches your CanMeasurementDto)
 struct __attribute__((packed)) TelemetryFrame {
@@ -94,9 +96,9 @@ void loop()
     // 3. Read CAN Frames
     if (ESP32Can.readFrame(rxFrame, 5))
     {
-
         pixels.setPixelColor(0, pixels.Color(0, 0, 255)); 
         pixels.show();
+        ledOffTime = millis() + 10; // Ugasi čez 10ms
 
         TelemetryFrame m;
         m.canId = rxFrame.identifier;
@@ -106,7 +108,12 @@ void loop()
         batchBuffer.push_back(m);
         Serial.printf("Captured ID: 0x%X\n", m.canId);
 
-        delay(10); // Short visible blink
+        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+        pixels.show();
+    }
+
+    if (millis() > ledOffTime)
+    {
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));
         pixels.show();
     }
