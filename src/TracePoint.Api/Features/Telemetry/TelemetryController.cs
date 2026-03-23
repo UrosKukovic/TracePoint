@@ -32,4 +32,20 @@ public class TelemetryController : ControllerBase
 
         return Ok(sessions);
     }
+
+    [HttpGet("sessions/{sessionId}/measurements")]
+    public async Task<IActionResult> GetSessionMeasurements(Guid sessionId)
+    {
+        var measurements = await _db.Measurements
+            .Where(m => m.SessionId == sessionId)
+            .OrderBy(m => m.Time)
+            .Select(m => new { m.Time, m.Value })
+            .ToListAsync();
+
+        // Formatiranje v Columnar format (C): [ [timestamps], [values] ]
+        var x = measurements.Select(m => ((DateTimeOffset)m.Time).ToUnixTimeMilliseconds() / 1000.0).ToArray();
+        var y = measurements.Select(m => m.Value).ToArray();
+
+        return Ok(new[] { x, y });
+    }
 }
