@@ -24,8 +24,10 @@ public class TelemetryHub : Hub
     {
         var newSessionId = Guid.NewGuid();
 
-        // 1. Uporabimo IServiceProvider, ker je Hub "Scoped", DbContext pa tudi.
-        // To je bolj varno in "EF-way" kot ročni SQL.
+        _buffer.CurrentSessionId = newSessionId;
+        _buffer.StartTimeUtc = DateTime.UtcNow;
+        _buffer.StartMillis = -1;
+
         using (var scope = _serviceProvider.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -35,14 +37,13 @@ public class TelemetryHub : Hub
                 Id = newSessionId,
                 Name = sessionName,
                 CreatedAt = DateTime.UtcNow,
-                FirmwareVersion = "v1.0-poc" // Kasneje to dobiš iz ESP32 paketa
+                FirmwareVersion = "v1.0-poc"
             };
 
             db.Sessions.Add(session);
             await db.SaveChangesAsync();
         }
 
-        // 2. Nastavimo buffer, da DatabaseWorker ve, kam pisati meritve
         _buffer.CurrentSessionId = newSessionId;
 
         _logger.LogInformation("[Session]: Started {Name} ({Id})", sessionName, newSessionId);

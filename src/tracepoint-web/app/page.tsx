@@ -19,6 +19,9 @@ export default function LiveDashboard() {
   const xDataRef = useRef<number[]>([]);
   const yDataRef = useRef<number[]>([]);
 
+  const sessionStartRealRef = useRef<number | null>(null);
+  const sessionStartMsRef = useRef<number | null>(null);
+  const globalTimeOffsetRef = useRef<number | null>(null);
 
   const options = {
     width: 800,
@@ -47,15 +50,35 @@ export default function LiveDashboard() {
       .withAutomaticReconnect()
       .build();
 
+    // load initial sessions
+    loadSessions();
     connectionRef.current = connection;
 
     connection.start().then(() => setIsConnected(true));
 
+    // Ko prejmemo signal, da se je snemanje začelo
+    connection.on("RecordingStarted", (data: { id: string, name: string }) => {
+      sessionStartRealRef.current = Date.now(); // Trenutni čas v brskalniku (Unix ms)
+      sessionStartMsRef.current = null; // Resetiramo, da ujamemo prvi paket
+      console.log("Snemanje se je začelo ob:", new Date(sessionStartRealRef.current).toISOString());
+    });
+
+    // V connection.on("ReceiveMeasurement", ...) zamenjaj celotno logiko za čas s temle:
     connection.on("ReceiveMeasurement", (msg: any) => {
       setLastValue(msg.value);
 
-      // 1. Dodaj nove podatke v ref (X in Y)
-      xDataRef.current.push(msg.timestampMs / 1000);
+      // 1. Izračunaj globalni offset ob prvem paketu (Wall Clock Sync)
+      if (globalTimeOffsetRef.current === null) {
+          // Trenutni čas v ms MINUS milisekunde iz ESP32
+          globalTimeOffsetRef.current = Date.now() - msg.timestampMs;
+          console.log("Sinhronizacija časa končana. Offset:", globalTimeOffsetRef.current);
+      }
+
+      // 2. Izračunaj realni čas za to točko
+      // (ESP32 ms + offset) / 1000 = sekunde od 1970 (Unix Epoch)
+      const displayTime = (msg.timestampMs + globalTimeOffsetRef.current) / 1000;
+
+      xDataRef.current.push(displayTime);
       yDataRef.current.push(msg.value);
 
       // 2. KLJUČNO: Omeji dolžino polja (npr. na zadnjih 200 točk)
@@ -85,6 +108,25 @@ export default function LiveDashboard() {
     } else {
       await connectionRef.current.invoke("StopRecording");
       setIsRecording(false);
+
+      // Wait to load sessions after stop recording and then list them
+      setTimeout(() => {
+        loadSessions();
+      }, 500);
+    }
+  };
+
+  // 1. Dodaj state za seje
+  const [sessions, setSessions] = useState<any[]>([]);
+
+  // 2. Funkcija za osveževanje (pokliči jo v useEffect ali ob StopRecording)
+  const loadSessions = async () => {
+    try {
+      const r = await fetch("http://localhost:5247/api/telemetry/sessions");
+      const data = await r.json();
+      setSessions(data);
+    } catch (e) {
+      console.error("Napaka pri branju sej", e);
     }
   };
 
@@ -120,6 +162,18 @@ export default function LiveDashboard() {
           options={options}
           data={chartData}
         />
+      </div>
+
+      <div className="mt-10 border-t border-slate-800 pt-6">
+        <h2 className="text-xl font-bold mb-4 text-slate-400">Pretekle meritve</h2>
+        <div className="flex flex-col gap-2">
+          {sessions.map(s => (
+            <div key={s.id} className="p-3 bg-slate-900 rounded border border-slate-800 flex justify-between">
+              <span>{s.name}</span>
+              <span className="text-slate-500 text-sm">{new Date(s.createdAt).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

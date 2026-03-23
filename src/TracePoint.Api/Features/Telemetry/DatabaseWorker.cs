@@ -60,23 +60,29 @@ public class DatabaseWorker : BackgroundService
 
     private async Task SaveBatch(List<CanMeasurementDto> items)
     {
-        var sessionGuid = _buffer.CurrentSessionId; 
-        
-        if (!sessionGuid.HasValue) return;
+        if (!_buffer.CurrentSessionId.HasValue) return;
+
+        if (_buffer.StartMillis == -1 && items.Count > 0) {
+            _buffer.StartMillis = items[0].TimestampMs;
+        }
+
+        var mappedItems = items.Select(x => {
+            var offsetMs = x.TimestampMs - _buffer.StartMillis;
+            var realTime = _buffer.StartTimeUtc.AddMilliseconds(offsetMs);
+
+            return new {
+                Time = realTime,
+                CanId = (long)x.CanId,
+                x.Value,
+                x.Channel,
+                SessionId = _buffer.CurrentSessionId.Value
+            };
+        });
 
         using var conn = new NpgsqlConnection(_connectionString);
-        
         const string sql = @"
             INSERT INTO ""Measurements"" (""Time"", ""CanId"", ""Value"", ""Channel"", ""SessionId"") 
-            VALUES (to_timestamp(@TimestampMs / 1000.0), @CanId, @Value, @Channel, @SessionId)";
-
-        var mappedItems = items.Select(x => new {
-            x.TimestampMs,
-            CanId = (long)x.CanId,
-            x.Value,
-            x.Channel,
-            SessionId = sessionGuid.Value
-        });
+            VALUES (@Time, @CanId, @Value, @Channel, @SessionId)";
 
         await conn.ExecuteAsync(sql, mappedItems);
     }
