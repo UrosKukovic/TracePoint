@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.SignalR;
-using MQTTnet;
+using Microsoft.EntityFrameworkCore;
 
 using TracePoint.Api.Features.Telemetry;
+using TracePoint.Api.Data;
 using TracePoint.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,13 @@ builder.Services.AddCors(options =>
 // SignalR
 builder.Services.AddSignalR();
 
+// DB
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Controllers
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -49,24 +57,6 @@ app.UseHttpsRedirection();
 // Register TelemetryHub
 app.MapHub<TelemetryHub>("/telemetryHub");
 
-// Endpoint
-// High-performance batch ingestion endpoint
-app.MapPost("/api/telemetry/ingest/batch", async (
-    List<CanMeasurementDto> measurements, 
-    IHubContext<TelemetryHub> hubContext, // Use IHubContext instead of the Hub class
-    TelemetryBuffer buffer) =>            // Inject buffer directly for DB throughput
-{
-    foreach (var m in measurements)
-    {
-        // 1. Broadcast to SignalR clients (Next.js dashboard)
-        await hubContext.Clients.All.SendAsync("ReceiveMeasurement", m);
-
-        // 2. Queue for DatabaseWorker to pick up and save to TimescaleDB
-        buffer.Writer.TryWrite(m);
-    }
-
-    return Results.Accepted();
-})
-.WithDescription("Receives a batch of CAN frames from the ESP32 Gateway.");
+app.MapControllers();
 
 app.Run();

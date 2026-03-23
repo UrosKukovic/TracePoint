@@ -1,58 +1,74 @@
 using Microsoft.AspNetCore.SignalR;
-using Dapper;
+
 
 using TracePoint.Shared;
+using TracePoint.Shared.Models;
+using TracePoint.Api.Data;
 
 namespace TracePoint.Api.Features.Telemetry;
 
 public class TelemetryHub : Hub
 {
     private readonly TelemetryBuffer _buffer;
-    private readonly IConfiguration _config;
+    private readonly IServiceProvider _serviceProvider; // Potrebujemo za DbContext v Hubu
+    private readonly ILogger<TelemetryHub> _logger;
 
-    public TelemetryHub(TelemetryBuffer buffer, IConfiguration config)
+    public TelemetryHub(TelemetryBuffer buffer, IServiceProvider serviceProvider, ILogger<TelemetryHub> logger)
     {
         _buffer = buffer;
-        _config = config;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
-    // To bo poklical Next.js, ko pritisneš gumb "Start"
     public async Task StartRecording(string sessionName)
     {
         var newSessionId = Guid.NewGuid();
-        _buffer.CurrentSessionId = newSessionId;
 
-        // Takoj zapišemo v tabelo 'sessions', da vemo, da obstaja
-        using (var conn = new Npgsql.NpgsqlConnection(_config.GetConnectionString("DefaultConnection")))
+        // 1. Uporabimo IServiceProvider, ker je Hub "Scoped", DbContext pa tudi.
+        // To je bolj varno in "EF-way" kot ročni SQL.
+        using (var scope = _serviceProvider.CreateScope())
         {
-            const string sql = "INSERT INTO sessions (id, name, created_at) VALUES (@Id, @Name, NOW())";
-            await conn.ExecuteAsync(sql, new { Id = newSessionId, Name = sessionName });
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
+            var session = new TelemetrySession
+            {
+                Id = newSessionId,
+                Name = sessionName,
+                CreatedAt = DateTime.UtcNow,
+                FirmwareVersion = "v1.0-poc" // Kasneje to dobiš iz ESP32 paketa
+            };
+
+            db.Sessions.Add(session);
+            await db.SaveChangesAsync();
         }
 
-        Console.WriteLine($"[Session]: Started {sessionName} ({newSessionId})");
+        // 2. Nastavimo buffer, da DatabaseWorker ve, kam pisati meritve
+        _buffer.CurrentSessionId = newSessionId;
+
+        _logger.LogInformation("[Session]: Started {Name} ({Id})", sessionName, newSessionId);
         
-        // Obvestimo vse kliente (npr. Next.js), da se je snemanje začelo
         await Clients.All.SendAsync("RecordingStarted", new { id = newSessionId, name = sessionName });
     }
 
-    public void StopRecording()
+    public async Task StopRecording()
     {
-        Console.WriteLine($"[Session]: Stopped recording {_buffer.CurrentSessionId}");
+        var oldId = _buffer.CurrentSessionId;
         _buffer.CurrentSessionId = null;
+        
+        _logger.LogInformation("[Session]: Stopped recording {Id}", oldId);
+        await Clients.All.SendAsync("RecordingStopped", new { id = oldId });
     }
 
+    // To kliče MqttBridgeWorker, ko prejme podatek iz ESP32
     public async Task SendMeasurement(CanMeasurementDto measurement)
     {
-        // 1. Real-time broadcast za Next.js graf
+        // Broadcast na frontend (uPlot graf)
         await Clients.All.SendAsync("ReceiveMeasurement", measurement);
 
-        // 2. Oddaj v buffer za vpis v bazo (v ozadju)
-        _buffer.Writer.TryWrite(measurement);
-    }
-
-    public override async Task OnConnectedAsync()
-    {
-        Console.WriteLine($"[Hub]: Device connected: {Context.ConnectionId}");
-        await base.OnConnectedAsync();
+        // Če snemamo, potisni v buffer za DatabaseWorker
+        if (_buffer.CurrentSessionId.HasValue)
+        {
+            _buffer.Writer.TryWrite(measurement);
+        }
     }
 }

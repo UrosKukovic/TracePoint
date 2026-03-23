@@ -1,6 +1,7 @@
 using Dapper;
 using Npgsql;
 using TracePoint.Shared;
+using TracePoint.Shared.Models;
 
 namespace TracePoint.Api.Features.Telemetry;
 
@@ -59,12 +60,14 @@ public class DatabaseWorker : BackgroundService
 
     private async Task SaveBatch(List<CanMeasurementDto> items)
     {
-        var sessionId = _buffer.CurrentSessionId; // Vzamemo trenutni ID iz bufferja
-        if (sessionId == null) return;
+        var sessionGuid = _buffer.CurrentSessionId; 
+        
+        if (!sessionGuid.HasValue) return;
 
         using var conn = new NpgsqlConnection(_connectionString);
+        
         const string sql = @"
-            INSERT INTO measurements (time, can_id, value, channel, session_id) 
+            INSERT INTO ""Measurements"" (""Time"", ""CanId"", ""Value"", ""Channel"", ""SessionId"") 
             VALUES (to_timestamp(@TimestampMs / 1000.0), @CanId, @Value, @Channel, @SessionId)";
 
         var mappedItems = items.Select(x => new {
@@ -72,7 +75,7 @@ public class DatabaseWorker : BackgroundService
             CanId = (long)x.CanId,
             x.Value,
             x.Channel,
-            SessionId = sessionId // Dodamo ID seje vsem vrsticam v paketu
+            SessionId = sessionGuid.Value
         });
 
         await conn.ExecuteAsync(sql, mappedItems);
