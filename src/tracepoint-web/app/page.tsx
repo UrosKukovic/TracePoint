@@ -4,7 +4,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as signalR from "@microsoft/signalr";
 import UplotReact from 'uplot-react';
 import 'uplot/dist/uPlot.min.css';
-import { useRouter } from 'next/navigation'; // <--- Pomembno za navigacijo
+import { useRouter } from 'next/navigation';
+
+// 1. Singleton connection outside the component lifecycle
+let sharedConnection: signalR.HubConnection | null = null;
 
 export default function LiveDashboard() {
   const router = useRouter();
@@ -12,17 +15,16 @@ export default function LiveDashboard() {
   const [lastValue, setLastValue] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
-
-  const connectionRef = useRef<signalR.HubConnection | null>(null);
   
   // uPlot data state
   const [chartData, setChartData] = useState<[number[], number[]]>([[], []]);
   
-  // Reference za visoko zmogljivost
+  // Performance Refs
   const xDataRef = useRef<number[]>([]);
   const yDataRef = useRef<number[]>([]);
   const globalTimeOffsetRef = useRef<number | null>(null);
 
+  // 2. Define options inside the component
   const options = {
     width: 800,
     height: 400,
@@ -36,6 +38,7 @@ export default function LiveDashboard() {
     axes: [{ stroke: "#64748b" }, { stroke: "#64748b" }],
   };
 
+  // 3. Define loadSessions function
   const loadSessions = async () => {
     try {
       const r = await fetch("http://localhost:5247/api/telemetry/sessions");
@@ -47,20 +50,35 @@ export default function LiveDashboard() {
   };
 
   useEffect(() => {
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5247/telemetryHub")
-      .withAutomaticReconnect()
-      .build();
+    // Initialize connection if it doesn't exist
+    if (!sharedConnection) {
+      sharedConnection = new signalR.HubConnectionBuilder()
+        .withUrl("http://localhost:5247/telemetryHub")
+        .withAutomaticReconnect()
+        .build();
+    }
 
+    const startConnection = async () => {
+      if (sharedConnection!.state === signalR.HubConnectionState.Disconnected) {
+        try {
+          await sharedConnection!.start();
+          setIsConnected(true);
+          console.log("SignalR Connected");
+        } catch (err) {
+          console.error("SignalR Start Error: ", err);
+        }
+      } else if (sharedConnection!.state === signalR.HubConnectionState.Connected) {
+        setIsConnected(true);
+      }
+    };
+
+    startConnection();
     loadSessions();
-    connectionRef.current = connection;
 
-    connection.start().then(() => setIsConnected(true));
-
-    connection.on("ReceiveMeasurement", (msg: any) => {
+    // Attach listener
+    sharedConnection.on("ReceiveMeasurement", (msg: any) => {
       setLastValue(msg.value);
 
-      // Sinhronizacija s časom računalnika ob prvem paketu
       if (globalTimeOffsetRef.current === null) {
           globalTimeOffsetRef.current = Date.now() - msg.timestampMs;
       }
@@ -70,7 +88,6 @@ export default function LiveDashboard() {
       xDataRef.current.push(displayTime);
       yDataRef.current.push(msg.value);
 
-      // Drseče okno: zadnjih 200 točk
       const MAX_POINTS = 200; 
       if (xDataRef.current.length > MAX_POINTS) {
         xDataRef.current.shift();
@@ -80,19 +97,25 @@ export default function LiveDashboard() {
       setChartData([[...xDataRef.current], [...yDataRef.current]]);
     });
 
-    return () => { connection.stop(); };
+    // Clean up only the listener, keep connection alive
+    return () => {
+      if (sharedConnection) {
+        sharedConnection.off("ReceiveMeasurement");
+      }
+    };
   }, []);
 
   const toggleRecording = async () => {
-    if (!connectionRef.current) return;
+    if (!sharedConnection || sharedConnection.state !== signalR.HubConnectionState.Connected) return;
+    
     if (!isRecording) {
       const sessionName = `Test Run - ${new Date().toLocaleTimeString()}`;
-      await connectionRef.current.invoke("StartRecording", sessionName);
+      await sharedConnection.invoke("StartRecording", sessionName);
       setIsRecording(true);
     } else {
-      await connectionRef.current.invoke("StopRecording");
+      await sharedConnection.invoke("StopRecording");
       setIsRecording(false);
-      setTimeout(loadSessions, 500);
+      setTimeout(loadSessions, 500); // Reload history after stop
     }
   };
 
@@ -122,7 +145,7 @@ export default function LiveDashboard() {
           <p className="text-5xl font-mono text-blue-400 mt-2">{lastValue.toFixed(2)}</p>
         </div>
         
-        <div className="md:col-span-2 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-xl">
+        <div className="md:col-span-2 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-xl overflow-hidden">
           <UplotReact options={options} data={chartData} />
         </div>
       </div>
