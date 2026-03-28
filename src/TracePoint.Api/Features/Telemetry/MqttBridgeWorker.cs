@@ -23,6 +23,7 @@ public class MqttBridgeWorker : BackgroundService
     private readonly TelemetryBuffer _buffer;
     private readonly ILogger<MqttBridgeWorker> _logger;
     private readonly MqttClientFactory _mqttFactory;
+    private int _liveSkipCounter = 0;
 
     public MqttBridgeWorker(
         IHubContext<TelemetryHub> hubContext, 
@@ -37,6 +38,7 @@ public class MqttBridgeWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        
         using var mqttClient = _mqttFactory.CreateMqttClient();
 
         var mqttClientOptions = new MqttClientOptionsBuilder()
@@ -44,9 +46,11 @@ public class MqttBridgeWorker : BackgroundService
             .WithCleanSession()
             .Build();
 
+        
         // Nastavitev procesiranja sporočil
         mqttClient.ApplicationMessageReceivedAsync += async e =>
         {
+            
             var sequence = e.ApplicationMessage.Payload;
             if (sequence.IsEmpty) return;
 
@@ -58,12 +62,7 @@ public class MqttBridgeWorker : BackgroundService
 
             for (int i = 0; i < frameCount; i++)
             {
-                // 2. Namesto Span-a tukaj ustvarimo kopijo ali pa slice tik pred uporabo
-                // Da se izognemo CS4007, ne shranjujemo Span-a v spremenljivko izven await-a
                 int offset = i * frameSize;
-                
-                // MemoryMarshal.Read potrebuje ReadOnlySpan, zato ga ustvarimo "v živo"
-                // Span ustvarjen znotraj klica funkcije je v redu, ker ne prečka 'await' meje
                 var frame = MemoryMarshal.Read<TelemetryFrameProxy>(dataArray.AsSpan(offset, frameSize));
 
                 var dto = new CanMeasurementDto 
@@ -74,11 +73,16 @@ public class MqttBridgeWorker : BackgroundService
                     Channel = "CAN_BUS_0"
                 };
 
-                // 3. SignalR klic (tukaj se zgodi await, zdaj je varno, ker nimamo Span-a v lokalni spremenljivki)
-                await _hubContext.Clients.All.SendAsync("ReceiveMeasurement", dto, stoppingToken);
-                
-                // 4. Queue za bazo
+                // 1. ALWAYS write to buffer for Database (100% data fidelity)
                 _buffer.Writer.TryWrite(dto);
+
+                // 2. ONLY send to UI if counter hits 10 (10% data for preview)
+                _liveSkipCounter++;
+                if (_liveSkipCounter >= 10) 
+                {
+                    await _hubContext.Clients.All.SendAsync("ReceiveMeasurement", dto, stoppingToken);
+                    _liveSkipCounter = 0;
+                }
             }
         };
 

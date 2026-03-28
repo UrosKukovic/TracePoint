@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TracePoint.Api.Data;
+using Npgsql;
+using Dapper;
 
 namespace TracePoint.Api.Features.Telemetry;
 
@@ -34,18 +36,67 @@ public class TelemetryController : ControllerBase
     }
 
     [HttpGet("sessions/{sessionId}/measurements")]
-    public async Task<IActionResult> GetSessionMeasurements(Guid sessionId)
+    public async Task<IActionResult> GetSessionMeasurements(
+        Guid sessionId, 
+        [FromQuery] double? min, 
+        [FromQuery] double? max)
     {
-        var measurements = await _db.Measurements
-            .Where(m => m.SessionId == sessionId)
-            .OrderBy(m => m.Time)
-            .Select(m => new { m.Time, m.Value })
-            .ToListAsync();
+        using var conn = new NpgsqlConnection(_db.Database.GetConnectionString());
+        await conn.OpenAsync();
 
-        // Formatiranje v Columnar format (C): [ [timestamps], [values] ]
-        var x = measurements.Select(m => ((DateTimeOffset)m.Time).ToUnixTimeMilliseconds() / 1000.0).ToArray();
-        var y = measurements.Select(m => m.Value).ToArray();
+        // 1. Determine the time range
+        if (min == null || max == null)
+        {
+            var range = await conn.QuerySingleOrDefaultAsync<(DateTime? start, DateTime? end)>(
+                "SELECT MIN(\"Time\"), MAX(\"Time\") FROM \"Measurements\" WHERE \"SessionId\" = @sessionId",
+                new { sessionId });
 
-        return Ok(new[] { x, y });
+            // If no data exists, return empty arrays immediately
+            if (range.start == null || range.end == null)
+            {
+                return Ok(new[] { Array.Empty<double>(), Array.Empty<double>() });
+            }
+
+            min = ((DateTimeOffset)range.start.Value).ToUnixTimeMilliseconds() / 1000.0;
+            max = ((DateTimeOffset)range.end.Value).ToUnixTimeMilliseconds() / 1000.0;
+        }
+
+        var startTime = DateTimeOffset.FromUnixTimeMilliseconds((long)(min * 1000)).UtcDateTime;
+        var endTime = DateTimeOffset.FromUnixTimeMilliseconds((long)(max * 1000)).UtcDateTime;
+
+        // 2. Calculate bucket size
+        var durationMs = (endTime - startTime).TotalMilliseconds;
+        var bucketMs = Math.Max(1, durationMs / 2000);
+        
+        // Create the interval string: e.g. "20 milliseconds"
+        string interval = $"{bucketMs} milliseconds";
+
+        // 3. Updated Query using parameter for interval
+        // Note: We use the bucketed time as our X axis
+        string sql = @"
+            SELECT 
+                time_bucket(@interval, ""Time"") AS Bucket,
+                AVG(""Value"") AS Val
+            FROM ""Measurements""
+            WHERE ""SessionId"" = @sessionId AND ""Time"" BETWEEN @startTime AND @endTime
+            GROUP BY Bucket
+            ORDER BY Bucket ASC";
+
+        try 
+        {
+            // Use an anonymous object to pass parameters
+            var data = await conn.QueryAsync<(DateTime Bucket, double Val)>(sql, 
+                new { interval = TimeSpan.FromMilliseconds(bucketMs), sessionId, startTime, endTime });
+
+            var x = data.Select(d => ((DateTimeOffset)d.Bucket).ToUnixTimeMilliseconds() / 1000.0).ToArray();
+            var y = data.Select(d => d.Val).ToArray();
+
+            return Ok(new[] { x, y });
+        }
+        catch (Exception ex)
+        {
+            // This will help you see the REAL error in your console
+            return BadRequest(ex.Message);
+        }
     }
 }
