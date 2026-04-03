@@ -42,6 +42,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Controllers
 builder.Services.AddControllers();
 
+// DBC
+builder.Services.AddSingleton<DbcRegistry>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

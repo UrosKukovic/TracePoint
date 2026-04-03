@@ -53,6 +53,10 @@
               "target": "Package",
               "version": "[2.1.72, )"
             },
+            "DbcParserLib": {
+              "target": "Package",
+              "version": "[1.8.0, )"
+            },
             "MQTTnet": {
               "target": "Package",
               "version": "[5.1.0.1559, )"

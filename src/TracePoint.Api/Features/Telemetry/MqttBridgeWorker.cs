@@ -22,18 +22,21 @@ public class MqttBridgeWorker : BackgroundService
     private readonly IHubContext<TelemetryHub> _hubContext;
     private readonly TelemetryBuffer _buffer;
     private readonly ILogger<MqttBridgeWorker> _logger;
+    private readonly DbcRegistry _dbcRegistry;
     private readonly MqttClientFactory _mqttFactory;
     private int _liveSkipCounter = 0;
 
     public MqttBridgeWorker(
         IHubContext<TelemetryHub> hubContext, 
         TelemetryBuffer buffer, 
-        ILogger<MqttBridgeWorker> logger)
+        ILogger<MqttBridgeWorker> logger,
+        DbcRegistry dbcRegistry)
     {
         _hubContext = hubContext;
         _buffer = buffer;
         _logger = logger;
         _mqttFactory = new MqttClientFactory();
+        _dbcRegistry = dbcRegistry;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,28 +68,22 @@ public class MqttBridgeWorker : BackgroundService
                 int offset = i * frameSize;
                 var frame = MemoryMarshal.Read<TelemetryFrameProxy>(dataArray.AsSpan(offset, frameSize));
 
-                float finalValue = 0;
+                float finalValue = frame.Value;
 
-                // Check if this ID matches our SENSOR_DATA (0x123 = 291)
-                if (frame.CanId == 0x123)
+                if (_dbcRegistry.TryGetMessage(frame.CanId, out var msg))
                 {
-                    // In a real scenario, 'Value' wouldn't be a float yet. 
-                    // Since your ESP32 code puts the 150 into the 'Value' float field 
-                    // via TelemetryFrameProxy, we treat it as raw integer bits first.
-                    
-                    // Let's assume the float field 'Value' actually contains the raw bits 
-                    // if that's how the ESP32 is casting it. 
-                    // If you sent it as raw bytes, we'd extract them here.
-                    
-                    uint rawInt = (uint)frame.Value; 
-
-                    // Apply DBC Scaling: (Raw * 0.01) - 1.0
-                    finalValue = (rawInt * 0.01f) - 1.0f;
-
-                    // Log for Validation
-                    _logger.LogInformation("DBC DECODE: ID 0x{Id:X} | Raw: {Raw} | Physical: {Phys}V", 
-                        frame.CanId, rawInt, finalValue);
+                    // 2. Find the SineWave signal (or any signal)
+                    var signal = msg.Signals.FirstOrDefault(s => s.Name == "SineWave");
+                    if (signal != null)
+                    {
+                        // 3. Extract raw bits (using the Proxy float as raw storage)
+                        uint raw = (uint)frame.Value;
+                        
+                        // 4. Apply DBC formula: (Raw * Factor) + Offset
+                        finalValue = (float)((raw * signal.Factor) + signal.Offset);
+                    }
                 }
+
                 else 
                 {
                     finalValue = frame.Value; // Fallback for other IDs

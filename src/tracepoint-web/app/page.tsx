@@ -24,6 +24,9 @@ export default function LiveDashboard() {
   const yDataRef = useRef<number[]>([]);
   const globalTimeOffsetRef = useRef<number | null>(null);
 
+  // DBC
+  const [activeDbc, setActiveDbc] = useState<string>("No DBC Loaded");
+
   // 2. Define options inside the component
   const options = {
     width: 800,
@@ -119,12 +122,49 @@ export default function LiveDashboard() {
     }
   };
 
+  // DBC
+  const handleDbcUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("http://localhost:5247/api/telemetry/upload-dbc", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        setActiveDbc(file.name);
+        alert("DBC successfully applied to Live Stream!");
+      }
+    } catch (err) {
+      console.error("DBC Upload failed", err);
+    }
+  };
+
   return (
     <div className="p-8 bg-slate-950 min-h-screen text-white">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
           TracePoint Live Dashboard
         </h1>
+
+        <div className="flex flex-col">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            TracePoint Live Dashboard
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Active Decoder:</span>
+            <span className="text-xs text-emerald-400 font-mono italic">{activeDbc}</span>
+          </div>
+        </div>
+
+        <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-all border border-slate-700">
+          UPLOAD DBC
+          <input type="file" accept=".dbc" className="hidden" onChange={handleDbcUpload} />
+        </label>
         
         <button
           onClick={toggleRecording}

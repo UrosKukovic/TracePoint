@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "ZGxvx8N1nS0=",
+  "dgSpecHash": "0Ttv+8ZU/zs=",
   "success": true,
   "projectFilePath": "/home/uros/Documents/projects/TracePoint/src/TracePoint.Api/TracePoint.Api.csproj",
   "expectedPackageFiles": [
     "/home/uros/.nuget/packages/dapper/2.1.72/dapper.2.1.72.nupkg.sha512",
+    "/home/uros/.nuget/packages/dbcparserlib/1.8.0/dbcparserlib.1.8.0.nupkg.sha512",
     "/home/uros/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/uros/.nuget/packages/mediatr/14.1.0/mediatr.14.1.0.nupkg.sha512",
     "/home/uros/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
