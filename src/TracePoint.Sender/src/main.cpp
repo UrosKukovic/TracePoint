@@ -46,52 +46,99 @@ void setup() {
     }
 }
 
+// void loop() {
+//     static uint32_t lastStamp = 0;
+//     uint32_t currentMillis = millis();
+    
+//     // Handle turning the LED off without blocking
+//     if (ledOffMillis > 0 && currentMillis >= ledOffMillis) {
+//         pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+//         pixels.show();
+//         ledOffMillis = 0; // Reset so we don't keep calling show()
+//     }
+
+//     if (currentMillis - lastStamp > 5) {
+//         lastStamp = currentMillis;
+
+//         CanFrame testFrame = {0};
+        
+//         // 1. Randomize the ID (Standard 11-bit range: 0x100 to 0x7FF)
+//         testFrame.identifier = random(0x100, 0x7FF); 
+//         testFrame.extd = 0;
+//         testFrame.data_length_code = 8;
+        
+//         // Calculate sine wave value (mapped to 0-255)
+//         uint8_t sineValue = (uint8_t)((sin(sineAngle) * 127.5) + 127.5);
+//         sineAngle += sineStep;
+//         if (sineAngle >= 2 * PI) sineAngle = 0;
+
+//         // 2. Fill with sine wave in the first byte, random for the rest
+//         testFrame.data[0] = sineValue;
+//         for(int i = 1; i < 8; i++) {
+//             testFrame.data[i] = (uint8_t)random(0, 256);
+//         }
+
+//         if (ESP32Can.writeFrame(testFrame, 1)) {
+//             Serial.printf("SENDER: Frame sent (ID: 0x%X | Sine: %d)\n", 
+//                           testFrame.identifier, testFrame.data[0]);
+
+//             // Logic for LEDs: Turn ON and set a future time to turn OFF
+//             pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
+//             pixels.show();
+//             ledOffMillis = currentMillis + 5; // LED will turn off in 5ms
+//         } 
+//         else {
+//             Serial.println("SENDER: Send failed!");
+//             pixels.setPixelColor(0, pixels.Color(255, 255, 255)); 
+//             pixels.show();
+//         }
+//     }
+// }
+
+
 void loop() {
     static uint32_t lastStamp = 0;
     uint32_t currentMillis = millis();
     
-    // Handle turning the LED off without blocking
+    // LED Handling (keep your non-blocking logic)
     if (ledOffMillis > 0 && currentMillis >= ledOffMillis) {
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));
         pixels.show();
-        ledOffMillis = 0; // Reset so we don't keep calling show()
+        ledOffMillis = 0; 
     }
 
-    // Maintain the 10ms interval (100Hz)
-    if (currentMillis - lastStamp > 5) {
+    // Send every 100ms so we can actually read the Serial logs easily
+    if (currentMillis - lastStamp > 100) {
         lastStamp = currentMillis;
 
         CanFrame testFrame = {0};
         
-        // 1. Randomize the ID (Standard 11-bit range: 0x100 to 0x7FF)
-        testFrame.identifier = random(0x100, 0x7FF); 
+        // 1. Set ID to match our DBC definition (0x123 = 291 decimal)
+        testFrame.identifier = 0x123; 
         testFrame.extd = 0;
         testFrame.data_length_code = 8;
         
-        // Calculate sine wave value (mapped to 0-255)
-        uint8_t sineValue = (uint8_t)((sin(sineAngle) * 127.5) + 127.5);
-        sineAngle += sineStep;
-        if (sineAngle >= 2 * PI) sineAngle = 0;
-
-        // 2. Fill with sine wave in the first byte, random for the rest
-        testFrame.data[0] = sineValue;
-        for(int i = 1; i < 8; i++) {
-            testFrame.data[i] = (uint8_t)random(0, 256);
+        // 2. Set Raw Value to 150 (0x0096)
+        // Since the DBC says 0|16@1+ (Little Endian), 
+        // byte 0 is Low Byte, byte 1 is High Byte.
+        uint16_t rawValue = 150; 
+        testFrame.data[0] = (uint8_t)(rawValue & 0xFF);         // 0x96
+        testFrame.data[1] = (uint8_t)((rawValue >> 8) & 0xFF);  // 0x00
+        
+        // Fill the rest with zeros for a clean test
+        for(int i = 2; i < 8; i++) {
+            testFrame.data[i] = 0;
         }
 
         if (ESP32Can.writeFrame(testFrame, 1)) {
-            Serial.printf("SENDER: Frame sent (ID: 0x%X | Sine: %d)\n", 
-                          testFrame.identifier, testFrame.data[0]);
-
-            // Logic for LEDs: Turn ON and set a future time to turn OFF
+            Serial.printf("TEST SENDER: ID 0x123 | Raw: %d | Target: 0.5V\n", rawValue);
+            
             pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
             pixels.show();
-            ledOffMillis = currentMillis + 5; // LED will turn off in 5ms
+            ledOffMillis = currentMillis + 10; 
         } 
         else {
-            Serial.println("SENDER: Send failed!");
-            pixels.setPixelColor(0, pixels.Color(255, 255, 255)); 
-            pixels.show();
+            Serial.println("TEST SENDER: Send failed!");
         }
     }
 }
