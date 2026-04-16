@@ -16,3 +16,6 @@ port: 5432
 u: postgres
 p: postgres
 db name: tracepoint
+
+# PlatformIO
+pio device monitor --port /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_D8:3B:DA:49:D8:4C-if00 --baud 115200

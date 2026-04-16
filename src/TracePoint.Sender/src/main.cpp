@@ -18,7 +18,7 @@ const float sineStep = 0.03;
 uint32_t ledOffMillis = 0;
 
 void setup() {
-    Serial.begin(115200);
+    // Serial.begin(115200);
     delay(2000);
 
     pixels.begin();
@@ -107,8 +107,8 @@ void loop() {
         ledOffMillis = 0; 
     }
 
-    // Send every 100ms so we can actually read the Serial logs easily
-    if (currentMillis - lastStamp > 100) {
+    // Send every 500 ms to test the localBuffer so that we don't stuff the buffer too fast
+    if (currentMillis - lastStamp > 500) {
         lastStamp = currentMillis;
 
         CanFrame testFrame = {0};
