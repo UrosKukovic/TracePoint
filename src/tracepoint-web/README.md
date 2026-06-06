@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# tracepoint-web
 
-## Getting Started
+Next.js frontend for TracePoint — live CAN telemetry dashboard, session recording controls, and historical analytics.
 
-First, run the development server:
+## Pages
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Live dashboard — SignalR stream, uPlot chart, DBC upload, start/stop recording, session list |
+| `/analytics/[sessionId]` | Recorded session chart with drag-to-zoom; zoom range stored in URL query params |
+
+## Features
+
+- **Live chart** — subscribes to `ReceiveMeasurement` on `/telemetryHub`; uses uPlot for performance with rolling 200-point window
+- **Recording** — calls `StartRecording` / `StopRecording` on the SignalR hub; session name is generated on the client
+- **DBC upload** — sends `.dbc` file to `POST /api/telemetry/upload-dbc` so the backend can decode raw CAN values
+- **Session history** — fetches `GET /api/telemetry/sessions` and links to analytics per session
+- **Analytics zoom** — selecting a range updates `?min=&max=` in the URL (shareable view); double-click resets
+
+## Tech stack
+
+- Next.js 16 (App Router), React 19, TypeScript
+- Tailwind CSS 4
+- [@microsoft/signalr](https://www.npmjs.com/package/@microsoft/signalr) for real-time data
+- [uPlot](https://github.com/leeoniya/uPlot) + `uplot-react` for charts (live and historical)
+
+## Prerequisites
+
+- Node.js 20+
+- TracePoint.Api running on `http://localhost:5247`
+- Mosquitto + gateway (or simulator) if you want real CAN data on the live chart
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Production build:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Backend URLs
 
-To learn more about Next.js, take a look at the following resources:
+API and SignalR endpoints are currently hardcoded to `http://localhost:5247`. Main touch points:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/page.tsx` — live dashboard, SignalR connection, DBC upload, sessions
+- `app/analytics/[sessionId]/page.tsx` — historical measurements with zoom
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Move these to environment variables (e.g. `NEXT_PUBLIC_API_URL`) when deploying.
 
-## Deploy on Vercel
+## UI structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/
+├── page.tsx                    # Live dashboard
+├── analytics/[sessionId]/
+│   └── page.tsx                # Session analytics
+├── globals.css
+└── layout.tsx
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Development notes
+
+- SignalR connection is kept as a module-level singleton so navigation does not reconnect on every render.
+- Live stream receives ~10% of frames (throttled server-side); the database still stores all frames during recording.
+- Chart time axis for live data is adjusted with a client-side offset so ESP `millis()` aligns with wall clock display.
+
+## Related docs
+
+- [Project overview](../../README.md)
+- [Backend README](../TracePoint.Api/README.md)
