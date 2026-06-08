@@ -6,7 +6,7 @@ Embedded C++ firmware for two ESP32 boards on a shared CAN bus. Together they fo
 
 | Folder | Board | Role |
 |--------|-------|------|
-| `TracePoint.Gateway/` | Freenove ESP32-S3 WROOM | CAN listener → local buffer → MQTT binary publish |
+| `TracePoint.Gateway/` | ESP32-S3 WROOM | CAN listener → local buffer → MQTT binary publish |
 | `TracePoint.Sender/` | ESP32 (TWAI) | CAN frame generator for testing |
 
 Both use **PlatformIO**, **Arduino framework**, and **ESP32-TWAI-CAN** at **125 kbps**.
@@ -43,8 +43,6 @@ Edit constants at the top of `src/main.cpp`:
 - `WIFI_SSID`, `WIFI_PASS`
 - `MQTT_SERVER`, `MQTT_PORT` (default `1883`)
 - `MQTT_TOPIC` (`telemetry/binary`)
-
-**Do not commit real credentials.** Plan is to move these to a separate config or secrets file.
 
 ### Dependencies (`platformio.ini`)
 
@@ -97,7 +95,7 @@ Sender ESP32          Gateway ESP32-S3
   CAN GND ───────────── CAN GND
 ```
 
-Use a proper CAN transceiver (e.g. SN65HVD230) on each board if you are not using a back-to-back setup that already includes one. Termination resistor (120 Ω) at the ends of the bus if required.
+Use a proper CAN transceiver (e.g. SN65HVD230) on each board if you are not using a back-to-back setup that already includes one. Termination resistor (120 Ω) at the ends of the bus is required.
 
 ## Testing without MQTT
 
@@ -114,5 +112,4 @@ Use a proper CAN transceiver (e.g. SN65HVD230) on each board if you are not usin
 ## Known gaps
 
 - Timestamps use `millis()` (relative), not NTP — API maps them to UTC session time on insert.
-- Gateway still contains test hooks that force WiFi disconnect/reconnect after 5s/10s; remove for production use.
-- WiFi password and MQTT host are hardcoded in source.
+- Gateway still contains test hooks that force WiFi disconnect/reconnect after 5s/10s.

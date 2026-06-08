@@ -8,10 +8,9 @@
 #include <PubSubClient.h>
 
 // --- Configuration ---
-// THIS IS BAD! should put this in some kind of secrets file
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASS = "WIFI_PASS";
-const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use your PC's IP
+const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch";
 
 // MQTT config
 const char* MQTT_SERVER = "PC_IP";
