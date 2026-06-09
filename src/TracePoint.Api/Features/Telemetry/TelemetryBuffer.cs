@@ -8,6 +8,9 @@ public class TelemetryBuffer
     public Guid? CurrentSessionId { get; set; }
     private readonly Channel<CanMeasurementDto> _channel;
 
+    public long StartMillis { get; set; }
+    public DateTime StartTimeUtc { get; set; }
+
     public TelemetryBuffer()
     {
         // Unbounded pomeni, da lahko sprejme ogromno podatkov brez čakanja

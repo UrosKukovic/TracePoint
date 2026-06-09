@@ -1,15 +1,21 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <ArduinoJson.h>
 #include <ESP32-TWAI-CAN.hpp>
 #include <vector>
+#include <deque>
 #include <Adafruit_NeoPixel.h>
+#include <PubSubClient.h>
 
 // --- Configuration ---
 const char* WIFI_SSID = "WIFI_SSID";
 const char* WIFI_PASS = "WIFI_PASS";
-const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use your PC's IP
+const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch";
+
+// MQTT config
+const char* MQTT_SERVER = "PC_IP";
+const uint16_t MQTT_PORT = 1883;
+const char* MQTT_TOPIC = "telemetry/binary";
 
 // Pins for ESP32-S3 N8R8
 #define CAN_TX_PIN GPIO_NUM_5
@@ -18,23 +24,50 @@ const char* API_URL = "http://PC_IP:5247/api/telemetry/ingest/batch"; // Use you
 #define NUM_PIXELS 1
 Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
 
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
 // Batching Settings
-const int MAX_BATCH_SIZE = 10;
+const int MAX_BATCH_SIZE = 1; // pri 10 je imel chart low fps, pri 1 ima velik fps
 const int FLUSH_INTERVAL_MS = 100;
 unsigned long lastFlushTime = 0;
 
+static unsigned long ledOffTime = 0;
+
+bool isPSRAMFound = false;
+
 // Data Structure (Matches your CanMeasurementDto)
-struct TelemetryFrame {
+struct __attribute__((packed)) TelemetryFrame {
     uint32_t canId;
     float value;
     long long timestampMs;
 };
 
-std::vector<TelemetryFrame> batchBuffer;
+enum class State
+{
+    ONLINE_MODE,
+    OFFLINE_MODE
+};
 
-// --- Function Prototypes ---
+static State currentState = State::OFFLINE_MODE;
+
+std::vector<TelemetryFrame> batchBuffer;
+std::deque<TelemetryFrame> localBuffer;
+
+// Define max number of local frames
+const size_t MAX_LOCAL_FRAMES = 1e6 / 16; // 1MB / 8MB
+
+static unsigned long lastConnCheck = 0;
+
+// DEBUG
+bool testDisconnectDone = false;
+bool testReconnectDone = false;
+unsigned long startTime = 0;
+
+// Function Prototypes
 void connectToWiFi();
 void sendBatch();
+void reconnectMqtt();
 
 void setup()
 {
@@ -43,16 +76,19 @@ void setup()
 
     Serial.begin(115200);
     pixels.begin();
-    pixels.setBrightness(30); // Keep it dim so it doesn't blind you
+    pixels.setBrightness(30);
     
     // Initializing feedback (Yellow = Booting/Connecting)
     pixels.setPixelColor(0, pixels.Color(255, 255, 0)); 
     pixels.show();
 
-    // 1. Initialize WiFi
+    // Initialize WiFi
     connectToWiFi();
 
-    // 2. Initialize CAN Bus
+    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+    mqttClient.setBufferSize(4096);
+
+    // Initialize CAN Bus
     ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
     ESP32Can.setSpeed(ESP32Can.convertSpeed(125));
     ESP32Can.setRxQueueSize(20);
@@ -68,45 +104,137 @@ void setup()
 
     pixels.setPixelColor(0, pixels.Color(0, 0, 0)); // Turn off after setup
     pixels.show();
+
+    // Check if PSRAM is detected
+    Serial.println("PSRAM check");
+    if (psramFound())
+    {
+        isPSRAMFound = true;
+        Serial.printf("PSRAM found. Total: %d bytes\n", ESP.getPsramSize());
+        Serial.printf("PSRAM found. Free: %d bytes\n", ESP.getFreePsram());
+    }
+
+    // DEBUG
+    // Delay 15 seconds so that we can begin to record a session or open a serial monitor
+    delay(15000);
+    startTime = millis();
 }
 
-void loop()
+void loop() 
 {
+    unsigned long now = millis();
+
+    // WiFi Reconnect Logic (Keep this independent)
+    if (WiFi.status() != WL_CONNECTED && (now - lastConnCheck > 10000)) {
+        lastConnCheck = now;
+        WiFi.begin(WIFI_SSID, WIFI_PASS);
+    }
+
+    // MQTT Reconnect Logic (Keep this independent)
+    if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+        static unsigned long lastMqttRetry = 0;
+        if (now - lastMqttRetry > 5000) {
+            lastMqttRetry = now;
+            reconnectMqtt(); // This is now non-blocking
+        }
+    }
+
+    mqttClient.loop();
+
+    // Update state based on reality
+    bool isOnline = (WiFi.status() == WL_CONNECTED && mqttClient.connected());
+    currentState = isOnline ? State::ONLINE_MODE : State::OFFLINE_MODE;
+
+    // 1. TEST TRIGGER: Disconnect after 5s
+    if (!testDisconnectDone && (now - startTime > 5000)) {
+        Serial.println("--- TEST: Simulating Outage (Disconnecting) ---");
+        WiFi.disconnect();
+        testDisconnectDone = true;
+    }
+    
+    // 2. TEST TRIGGER: Reconnect after 10s (5s after disconnect)
+    if (testDisconnectDone && !testReconnectDone && (now - startTime > 10000)) {
+        Serial.println("--- TEST: Recovering (Connecting) ---");
+        WiFi.begin(WIFI_SSID, WIFI_PASS);
+        testReconnectDone = true;
+    }
+    
     CanFrame rxFrame;
 
-    // 3. Read CAN Frames
+    // Read CAN Frames (always store inside localBuffer)
     if (ESP32Can.readFrame(rxFrame, 5))
     {
-
         pixels.setPixelColor(0, pixels.Color(0, 0, 255)); 
         pixels.show();
+        ledOffTime = millis() + 10;
 
         TelemetryFrame m;
         m.canId = rxFrame.identifier;
         m.value = (float)rxFrame.data[0]; // Logic: Taking 1st byte as value for PoC
         m.timestampMs = millis();        // Will replace with NTP later
         
-        batchBuffer.push_back(m);
-        Serial.printf("Captured ID: 0x%X\n", m.canId);
+        // Push to the back of the queue
+        localBuffer.push_back(m);
 
-        delay(10); // Short visible blink
+        // DEBUG
+        Serial.printf("Saved to localBuffer. LocalBuffer size: %d, PSRAM free: %d\n", localBuffer.size(), ESP.getFreePsram());
+
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));
         pixels.show();
     }
 
-    // 4. Periodic/Size-based Flush
-    if (!batchBuffer.empty() && 
-       (batchBuffer.size() >= MAX_BATCH_SIZE || (millis() - lastFlushTime > FLUSH_INTERVAL_MS)))
+    if (millis() > ledOffTime)
     {
-        sendBatch();
-        lastFlushTime = millis();
+        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+        pixels.show();
     }
 
-    // 5. Keep-alive WiFi check
-    if (WiFi.status() != WL_CONNECTED && millis() % 10000 == 0)
+    // If online, move data from local to batchBuffer
+    if (currentState == State::ONLINE_MODE && !localBuffer.empty())
     {
-        connectToWiFi();
+        // As soon as we get ONLINE, we send a batch not waiting for batch size or anything else
+        batchBuffer.clear();
+
+        // Lets first send max 50 frames
+        int toSend = min((int)localBuffer.size(), 50);
+
+        for (int i=0; i<toSend;i++)
+        {
+            // grab from the latest end and push it to the back of the batchBuffer
+            batchBuffer.push_back(localBuffer.front());
+            localBuffer.pop_front();
+        }
+
+        sendBatch();
+        lastFlushTime = millis();
+
+        Serial.printf("Emptying localBuffer. LocalBuffer size: %d, PSRAM free: %d\n", localBuffer.size(), ESP.getFreePsram());
+
     }
+
+    // Periodic/Size-based Flush??
+    // if (!batchBuffer.empty() && 
+    //    (batchBuffer.size() >= MAX_BATCH_SIZE || (millis() - lastFlushTime > FLUSH_INTERVAL_MS)))
+    // {
+    //     sendBatch();
+    //     lastFlushTime = millis();
+    // }
+
+
+    if (millis() - lastConnCheck > 10000)
+    {
+        lastConnCheck = millis();
+        if (WiFi.status() != WL_CONNECTED)
+            // trigger the WiFi reconnect
+            WiFi.begin(WIFI_SSID, WIFI_PASS);
+    }
+
+    // Keep-alive WiFi check
+    // This is non blocking wifi connection check every 10 seconds
+    // if (WiFi.status() != WL_CONNECTED && millis() % 10000 == 0)
+    // {
+    //     connectToWiFi();
+    // }
 }
 
 void connectToWiFi()
@@ -134,37 +262,40 @@ void connectToWiFi()
 
 void sendBatch()
 {
-    StaticJsonDocument<2048> doc;
-    JsonArray array = doc.to<JsonArray>();
-
-    for (const auto& m : batchBuffer) 
-    {
-        JsonObject obj = array.createNestedObject();
-        obj["canId"] = m.canId;
-        obj["timestampMs"] = m.timestampMs;
-        obj["value"] = m.value;
-        obj["channel"] = "CAN_BUS_0";
+    // idk if this is needed
+    if (!mqttClient.connected()) {
+        reconnectMqtt();
     }
 
-    String jsonPayload;
-    serializeJson(doc, jsonPayload);
+    // Calculate size in bytes: number of elements * 16 bytes (one frame)
+    size_t packetSize = batchBuffer.size() * sizeof(TelemetryFrame);
+    
+    // Pointer to the start of the data vector
+    const uint8_t* payload = reinterpret_cast<const uint8_t*>(batchBuffer.data());
 
-    HTTPClient http;
-    http.begin(API_URL);
-    http.addHeader("Content-Type", "application/json");
-
-    int httpResponseCode = http.POST(jsonPayload);
-
-    if (httpResponseCode == 202)
+    // send raw bytes from batchBuffer
+    if (mqttClient.publish(MQTT_TOPIC, payload, packetSize))
     {
-        batchBuffer.clear(); // Only clear if API accepted the data
+        Serial.printf("MQTT Binary: Sent %d frames\n", batchBuffer.size());
+        // Clear batchBuffer upon successful batch send
+        batchBuffer.clear();
+        lastFlushTime = millis();
     }
     else
     {
-        pixels.setPixelColor(0, pixels.Color(255, 0, 0));
-        pixels.show();
-
-        Serial.printf("API Error [%d]: %s\n", httpResponseCode, http.errorToString(httpResponseCode).c_str());
+        Serial.println("MQTT: Publish failed! Check 'mqttClient.setBufferSize(4096)' in setup.");
     }
-    http.end();
+}
+
+void reconnectMqtt() {
+    // CHANGE: 'while' to 'if' makes it non-blocking
+    if (!mqttClient.connected()) {
+        Serial.print("Attempting MQTT connection...");
+        if (mqttClient.connect("TracePoint_Gateway_S3")) {
+            Serial.println("connected");
+        } else {
+            Serial.printf("failed, rc=%d\n", mqttClient.state());
+            // REMOVE delay(2000)
+        }
+    }
 }

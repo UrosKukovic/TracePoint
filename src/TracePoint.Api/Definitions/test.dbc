@@ -1,0 +1,12 @@
+VERSION ""
+
+NS_ :
+    BA_
+    BA_DEF_
+
+BS_:
+
+BU_: SENDER_NODE RECEIVER_NODE
+
+BO_ 291 SENSOR_DATA: 8 SENDER_NODE
+ SG_ SineWave : 0|16@1+ (0.01,-1) [-1|1] "V" RECEIVER_NODE

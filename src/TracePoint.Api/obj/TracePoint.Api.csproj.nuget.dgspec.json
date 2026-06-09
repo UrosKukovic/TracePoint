@@ -53,6 +53,14 @@
               "target": "Package",
               "version": "[2.1.72, )"
             },
+            "DbcParserLib": {
+              "target": "Package",
+              "version": "[1.8.0, )"
+            },
+            "MQTTnet": {
+              "target": "Package",
+              "version": "[5.1.0.1559, )"
+            },
             "MediatR": {
               "target": "Package",
               "version": "[14.1.0, )"
@@ -60,6 +68,12 @@
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[10.0.3, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.5, )"
             },
             "Npgsql": {
               "target": "Package",
@@ -89,7 +103,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
@@ -563,7 +577,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/lib64/dotnet/sdk/10.0.104/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
