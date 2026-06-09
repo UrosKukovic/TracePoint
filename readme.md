@@ -42,8 +42,6 @@ flowchart LR
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS, uPlot, SignalR client |
 | Messaging | Mosquitto MQTT broker |
 
-<<<<<<< HEAD
-=======
 ## Repository layout
 
 ```
@@ -59,7 +57,6 @@ TracePoint/
 └── TracePoint.slnx
 ```
 
->>>>>>> 8669a6eb7e6b78a47c4e0a3719bba7ae49053fc0
 Each main component has its own README with setup details:
 
 - [Backend (`TracePoint.Api`)](src/TracePoint.Api/README.md)
@@ -135,21 +132,11 @@ dotnet run
 
 ## Local dev notes
 
-<<<<<<< HEAD
-=======
-**pgAdmin** (if you use the bundled container):
-
-- Login: `uros@tracepoint.com` / `admin`
-- Server: `TracePoint-Local`, host `172.17.0.1`, port `5432`, user `postgres`
-
->>>>>>> 8669a6eb7e6b78a47c4e0a3719bba7ae49053fc0
 **Serial monitor** (Linux example):
 
 ```bash
 pio device monitor --port /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_* --baud 115200
 ```
-<<<<<<< HEAD
-=======
 
 ## Highlights (for reviewers)
 
@@ -158,12 +145,3 @@ pio device monitor --port /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_
 - **DBC decoding at ingest**: upload a `.dbc` file from the UI; the API maps raw CAN bytes to physical values (factor/offset).
 - **Live vs storage path**: 100% of frames go to the DB buffer during recording; only every 10th frame is sent to the live chart to keep the UI responsive.
 - **Time-series queries**: historical charts use TimescaleDB `time_bucket` with ~2000 buckets, and zoom level is reflected in the URL (`?min=&max=`).
-
-## Status
-
-Proof-of-concept. WiFi credentials and API URLs are still hardcoded in firmware. Auth, multi-device support, and proper secrets management are not implemented yet.
-
-## License
-
-Private / portfolio project. Add a license file if you plan to open-source it.
->>>>>>> 8669a6eb7e6b78a47c4e0a3719bba7ae49053fc0
