@@ -27,4 +27,10 @@ Log every confirmed fix here before anything else, including the commit message 
 
 ## Resolved
 
-(none yet)
+### Dead sine-wave code in Sender
+- **Date found:** 2026-08-26
+- **Date fixed:** 2026-08-26
+- **Ticket:** Group 1 (housekeeping, ahead of the RAII work)
+- **Bug:** `TracePoint.Sender/src/main.cpp` declared `sineAngle`, `sineStep`, and included `math.h` with a comment claiming sine-wave generation, but the code actually only ever writes a static raw value of `150` — none of the three were referenced anywhere in `setup()` or `loop()`.
+- **Solution:** Removed the unused `#include <math.h>`, `sineAngle`, and `sineStep` declarations. No behavior change.
+- **Explanation:** Leftover from an earlier version of the sender that generated a sine wave; the switch to a static test value never cleaned up the now-dead declarations. The fix is safe because nothing referenced them — a full-file grep confirmed zero other uses before removal.

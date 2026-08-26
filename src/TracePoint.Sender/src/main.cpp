@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <ESP32-TWAI-CAN.hpp>
 #include <Adafruit_NeoPixel.h>
-#include <math.h> // Added for sine function
 
 #define CAN_TX_PIN GPIO_NUM_5
 #define CAN_RX_PIN GPIO_NUM_4
@@ -9,10 +8,6 @@
 #define NUM_PIXELS 1
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
-
-// Variables for sine wave generation
-float sineAngle = 0;
-const float sineStep = 0.03; 
 
 // Variable to track LED off-time
 uint32_t ledOffMillis = 0;
