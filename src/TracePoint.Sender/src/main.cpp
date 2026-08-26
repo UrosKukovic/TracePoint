@@ -1,13 +1,13 @@
+#include "StatusLed.h"
+
 #include <Arduino.h>
 #include <ESP32-TWAI-CAN.hpp>
-#include <Adafruit_NeoPixel.h>
 
 #define CAN_TX_PIN GPIO_NUM_5
 #define CAN_RX_PIN GPIO_NUM_4
 #define RGB_PIN GPIO_NUM_38
-#define NUM_PIXELS 1
 
-Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
+StatusLed statusLed(RGB_PIN, 50);
 
 // Variable to track LED off-time
 uint32_t ledOffMillis = 0;
@@ -15,9 +15,6 @@ uint32_t ledOffMillis = 0;
 void setup() {
     // Serial.begin(115200);
     delay(2000);
-
-    pixels.begin();
-    pixels.setBrightness(50);
 
     // Setting pins
     ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
@@ -47,8 +44,8 @@ void loop() {
     
     // LED Handling
     if (ledOffMillis > 0 && currentMillis >= ledOffMillis) {
-        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-        pixels.show();
+        // Turn off the LED
+        statusLed.off();
         ledOffMillis = 0; 
     }
 
@@ -77,9 +74,8 @@ void loop() {
 
         if (ESP32Can.writeFrame(testFrame, 1)) {
             Serial.printf("TEST SENDER: ID 0x123 | Raw: %d | Target: 0.5V\n", rawValue);
-            
-            pixels.setPixelColor(0, pixels.Color(0, 255, 0)); 
-            pixels.show();
+            // set to green LED upon sending a CAN frame
+            statusLed.setColor(0,255,0);
             ledOffMillis = currentMillis + 10; 
         } 
         else {

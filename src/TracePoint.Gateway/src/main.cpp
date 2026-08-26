@@ -1,3 +1,5 @@
+#include "StatusLed.h"
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -21,8 +23,9 @@ const char* MQTT_TOPIC = "telemetry/binary";
 #define CAN_TX_PIN GPIO_NUM_5
 #define CAN_RX_PIN GPIO_NUM_4
 #define RGB_PIN GPIO_NUM_38
-#define NUM_PIXELS 1
-Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_RGB + NEO_KHZ800);
+
+// object creation
+StatusLed statusLed(RGB_PIN, 30);
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -75,12 +78,9 @@ void setup()
     delay(2000);
 
     Serial.begin(115200);
-    pixels.begin();
-    pixels.setBrightness(30);
     
     // Initializing feedback (Yellow = Booting/Connecting)
-    pixels.setPixelColor(0, pixels.Color(255, 255, 0)); 
-    pixels.show();
+    statusLed.setColor(255,255,0);
 
     // Initialize WiFi
     connectToWiFi();
@@ -102,8 +102,8 @@ void setup()
         Serial.println("GATEWAY: CAN Initialization Failed!");
     }
 
-    pixels.setPixelColor(0, pixels.Color(0, 0, 0)); // Turn off after setup
-    pixels.show();
+    // Turn off the LED after setup
+    statusLed.off();
 
     // Check if PSRAM is detected
     Serial.println("PSRAM check");
@@ -164,8 +164,8 @@ void loop()
     // Read CAN Frames (always store inside localBuffer)
     if (ESP32Can.readFrame(rxFrame, 5))
     {
-        pixels.setPixelColor(0, pixels.Color(0, 0, 255)); 
-        pixels.show();
+        // blue LED upon CAN frame received
+        statusLed.setColor(0,0,255);
         ledOffTime = millis() + 10;
 
         TelemetryFrame m;
@@ -179,14 +179,14 @@ void loop()
         // DEBUG
         Serial.printf("Saved to localBuffer. LocalBuffer size: %d, PSRAM free: %d\n", localBuffer.size(), ESP.getFreePsram());
 
-        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-        pixels.show();
+        // Turn off the LED
+        statusLed.off();
     }
 
     if (millis() > ledOffTime)
     {
-        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
-        pixels.show();
+        // Turn off the LED
+        statusLed.off();
     }
 
     // If online, move data from local to batchBuffer
