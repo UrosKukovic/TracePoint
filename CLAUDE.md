@@ -9,6 +9,7 @@ Engineering discipline for AI-assisted work on TracePoint's firmware rework. See
 3. Never add a feature that wasn't asked for. If you think it's needed, say so in one line and wait.
 4. Never rewrite working code just because it could have been written differently.
 5. No file over ~300 lines. If it's heading there, stop and propose the split.
+6. Never run `git commit` (or `git push`). Propose the commit message and let the user commit manually.
 
 ## Required behavior every session
 
