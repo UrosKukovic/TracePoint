@@ -11,6 +11,20 @@ CAN bus telemetry system: read frames on an ESP32, stream them over MQTT, store 
 3. The **API** subscribes to MQTT, decodes signals using uploaded DBC files, pushes live data through SignalR, and writes recorded sessions to the database.
 4. The **web app** shows a live chart, lets you start/stop recording, and opens past sessions in an analytics view with zoom and shareable URLs.
 
+## Screenshots
+
+**Live dashboard** — real-time chart while recording a session
+
+![Live dashboard](docs/screenshots/live-dashboard.jpg)
+
+**Session history** — past recordings on the dashboard
+
+![Session history](docs/screenshots/session-history.jpg)
+
+**Analytics view** — recorded session with zoom
+
+![Analytics view](docs/screenshots/analytics-view.jpg)
+
 ## Architecture
 
 ```mermaid

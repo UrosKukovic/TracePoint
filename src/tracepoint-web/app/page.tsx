@@ -6,7 +6,7 @@ import UplotReact from 'uplot-react';
 import 'uplot/dist/uPlot.min.css';
 import { useRouter } from 'next/navigation';
 
-// 1. Singleton connection outside the component lifecycle
+// Kept outside the component so the connection survives re-renders and HMR
 let sharedConnection: signalR.HubConnection | null = null;
 
 export default function LiveDashboard() {
@@ -15,19 +15,15 @@ export default function LiveDashboard() {
   const [lastValue, setLastValue] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
-  
-  // uPlot data state
+
   const [chartData, setChartData] = useState<[number[], number[]]>([[], []]);
-  
-  // Performance Refs
+
   const xDataRef = useRef<number[]>([]);
   const yDataRef = useRef<number[]>([]);
   const globalTimeOffsetRef = useRef<number | null>(null);
 
-  // DBC
   const [activeDbc, setActiveDbc] = useState<string>("No DBC Loaded");
 
-  // 2. Define options inside the component
   const options = {
     width: 800,
     height: 400,
@@ -41,19 +37,17 @@ export default function LiveDashboard() {
     axes: [{ stroke: "#64748b" }, { stroke: "#64748b" }],
   };
 
-  // 3. Define loadSessions function
   const loadSessions = async () => {
     try {
       const r = await fetch("http://localhost:5247/api/telemetry/sessions");
       const data = await r.json();
       setSessions(data);
     } catch (e) {
-      console.error("Napaka pri branju sej", e);
+      console.error("Failed to load sessions", e);
     }
   };
 
   useEffect(() => {
-    // Initialize connection if it doesn't exist
     if (!sharedConnection) {
       sharedConnection = new signalR.HubConnectionBuilder()
         .withUrl("http://localhost:5247/telemetryHub")
@@ -78,7 +72,6 @@ export default function LiveDashboard() {
     startConnection();
     loadSessions();
 
-    // Attach listener
     sharedConnection.on("ReceiveMeasurement", (msg: any) => {
       setLastValue(msg.value);
 
@@ -122,7 +115,6 @@ export default function LiveDashboard() {
     }
   };
 
-  // DBC
   const handleDbcUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

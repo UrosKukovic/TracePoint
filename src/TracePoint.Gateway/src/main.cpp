@@ -145,14 +145,14 @@ void loop()
     bool isOnline = (WiFi.status() == WL_CONNECTED && mqttClient.connected());
     currentState = isOnline ? State::ONLINE_MODE : State::OFFLINE_MODE;
 
-    // 1. TEST TRIGGER: Disconnect after 5s
+    // TEST TRIGGER: Disconnect after 5s
     if (!testDisconnectDone && (now - startTime > 5000)) {
         Serial.println("--- TEST: Simulating Outage (Disconnecting) ---");
         WiFi.disconnect();
         testDisconnectDone = true;
     }
     
-    // 2. TEST TRIGGER: Reconnect after 10s (5s after disconnect)
+    // TEST TRIGGER: Reconnect after 10s (5s after disconnect)
     if (testDisconnectDone && !testReconnectDone && (now - startTime > 10000)) {
         Serial.println("--- TEST: Recovering (Connecting) ---");
         WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -212,15 +212,6 @@ void loop()
 
     }
 
-    // Periodic/Size-based Flush??
-    // if (!batchBuffer.empty() && 
-    //    (batchBuffer.size() >= MAX_BATCH_SIZE || (millis() - lastFlushTime > FLUSH_INTERVAL_MS)))
-    // {
-    //     sendBatch();
-    //     lastFlushTime = millis();
-    // }
-
-
     if (millis() - lastConnCheck > 10000)
     {
         lastConnCheck = millis();
@@ -228,13 +219,6 @@ void loop()
             // trigger the WiFi reconnect
             WiFi.begin(WIFI_SSID, WIFI_PASS);
     }
-
-    // Keep-alive WiFi check
-    // This is non blocking wifi connection check every 10 seconds
-    // if (WiFi.status() != WL_CONNECTED && millis() % 10000 == 0)
-    // {
-    //     connectToWiFi();
-    // }
 }
 
 void connectToWiFi()
@@ -262,7 +246,6 @@ void connectToWiFi()
 
 void sendBatch()
 {
-    // idk if this is needed
     if (!mqttClient.connected()) {
         reconnectMqtt();
     }
@@ -288,14 +271,12 @@ void sendBatch()
 }
 
 void reconnectMqtt() {
-    // CHANGE: 'while' to 'if' makes it non-blocking
     if (!mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
         if (mqttClient.connect("TracePoint_Gateway_S3")) {
             Serial.println("connected");
         } else {
             Serial.printf("failed, rc=%d\n", mqttClient.state());
-            // REMOVE delay(2000)
         }
     }
 }

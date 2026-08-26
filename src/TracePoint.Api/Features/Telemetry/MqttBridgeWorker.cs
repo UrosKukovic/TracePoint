@@ -10,9 +10,9 @@ using TracePoint.Shared;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct TelemetryFrameProxy
 {
-    public uint CanId;        // 4 bajti
-    public float Value;       // 4 bajti
-    public long TimestampMs;  // 8 bajtov
+    public uint CanId;        // 4 bytes
+    public float Value;       // 4 bytes
+    public long TimestampMs;  // 8 bytes
 }
 
 
@@ -49,16 +49,13 @@ public class MqttBridgeWorker : BackgroundService
             .WithCleanSession()
             .Build();
 
-        
-        // Nastavitev procesiranja sporočil
         mqttClient.ApplicationMessageReceivedAsync += async e =>
         {
-            
             var sequence = e.ApplicationMessage.Payload;
             if (sequence.IsEmpty) return;
 
-            // 1. Pretvorimo v polje (Heap-allocated), ki preživi 'await'
-            byte[] dataArray = sequence.ToArray(); 
+            // Copy to a heap-allocated array since a Span can't survive an await
+            byte[] dataArray = sequence.ToArray();
             
             int frameSize = Marshal.SizeOf<TelemetryFrameProxy>();
             int frameCount = dataArray.Length / frameSize;
@@ -84,14 +81,12 @@ public class MqttBridgeWorker : BackgroundService
                     }
                 }
 
-                else 
+                else
                 {
                     finalValue = frame.Value; // Fallback for other IDs
                 }
 
-                // --- END DBC PARSER LOGIC ---
-
-                var dto = new CanMeasurementDto 
+                var dto = new CanMeasurementDto
                 {
                     CanId = frame.CanId,
                     Value = finalValue, // Now sending the decoded physical value
@@ -99,10 +94,10 @@ public class MqttBridgeWorker : BackgroundService
                     Channel = "CAN_BUS_0"
                 };
 
-                // 1. ALWAYS write to buffer for Database (100% data fidelity)
+                // ALWAYS write to buffer for Database (100% data fidelity)
                 _buffer.Writer.TryWrite(dto);
 
-                // 2. ONLY send to UI if counter hits 10 (10% data for preview)
+                // ONLY send to UI if counter hits 10 (10% data for preview)
                 _liveSkipCounter++;
                 if (_liveSkipCounter >= 10) 
                 {
@@ -112,7 +107,6 @@ public class MqttBridgeWorker : BackgroundService
             }
         };
 
-        // Povezava in naročanje
         try
         {
             await mqttClient.ConnectAsync(mqttClientOptions, stoppingToken);
@@ -127,25 +121,23 @@ public class MqttBridgeWorker : BackgroundService
                 .Build();
 
             await mqttClient.SubscribeAsync(subscribeOptions, stoppingToken);
-            _logger.LogInformation("MQTT Bridge: Povezan in naročen na 'telemetry/batch'");
+            _logger.LogInformation("MQTT Bridge: Connected and subscribed to '{Topic}'", MQTT_TOPIC);
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "MQTT Bridge: Ni se mogoče povezati na Mosquitto!");
+            _logger.LogCritical(ex, "MQTT Bridge: Unable to connect to Mosquitto!");
         }
 
-        // Glavna zanka, ki drži worker živ
         while (!stoppingToken.IsCancellationRequested)
         {
             if (!mqttClient.IsConnected)
             {
-                _logger.LogWarning("MQTT Bridge: Povezava izgubljena, poskušam ponovno...");
+                _logger.LogWarning("MQTT Bridge: Connection lost, retrying...");
                 try { await mqttClient.ConnectAsync(mqttClientOptions, stoppingToken); } catch { }
             }
             await Task.Delay(5000, stoppingToken);
         }
 
-        // Čist odklop
         await mqttClient.DisconnectAsync(new MqttClientDisconnectOptionsBuilder()
             .WithReason(MqttClientDisconnectOptionsReason.NormalDisconnection).Build());
     }

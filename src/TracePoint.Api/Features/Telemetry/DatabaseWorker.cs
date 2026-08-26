@@ -26,14 +26,13 @@ public class DatabaseWorker : BackgroundService
         {
             try
             {
-                // Čakaj na podatke, vendar ne predolgo (max 1 sekundo), da izpraznimo buffer redno
+                // Wait for data, but no longer than 1 second, so the buffer still gets flushed regularly
                 if (await _buffer.Reader.WaitToReadAsync(stoppingToken))
                 {
                     while (_buffer.Reader.TryRead(out var measurement))
                     {
                         batch.Add(measurement);
-                        
-                        // Ko dosežemo 500 zapisov, jih zapišemo v bazo
+
                         if (batch.Count >= 500)
                         {
                             await SaveBatch(batch);
@@ -42,7 +41,6 @@ public class DatabaseWorker : BackgroundService
                     }
                 }
 
-                // Če je po ciklu še kaj ostalo v listi, zapiši zdaj
                 if (batch.Count > 0)
                 {
                     await SaveBatch(batch);
@@ -54,7 +52,7 @@ public class DatabaseWorker : BackgroundService
                 _logger.LogError(ex, "Error in DatabaseWorker");
             }
 
-            await Task.Delay(500, stoppingToken); // Počakaj pol sekunde pred naslednjim preverjanjem
+            await Task.Delay(500, stoppingToken);
         }
     }
 

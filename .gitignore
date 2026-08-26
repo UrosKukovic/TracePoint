@@ -4,3 +4,6 @@
 /src/TracePoint.Simulator/obj/Debug
 /src/TracePoint.Shared/bin/Debug
 /src/TracePoint.Shared/obj/Debug
+
+# Personal, not-for-repo AI workflow instructions
+CLAUDE.local.md

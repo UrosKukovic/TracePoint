@@ -10,7 +10,7 @@ namespace TracePoint.Api.Features.Telemetry;
 public class TelemetryHub : Hub
 {
     private readonly TelemetryBuffer _buffer;
-    private readonly IServiceProvider _serviceProvider; // Potrebujemo za DbContext v Hubu
+    private readonly IServiceProvider _serviceProvider; // Needed to resolve a scoped DbContext inside hub methods
     private readonly ILogger<TelemetryHub> _logger;
 
     public TelemetryHub(TelemetryBuffer buffer, IServiceProvider serviceProvider, ILogger<TelemetryHub> logger)
@@ -60,13 +60,11 @@ public class TelemetryHub : Hub
         await Clients.All.SendAsync("RecordingStopped", new { id = oldId });
     }
 
-    // To kliče MqttBridgeWorker, ko prejme podatek iz ESP32
+    // Called by MqttBridgeWorker when it receives data from the ESP32
     public async Task SendMeasurement(CanMeasurementDto measurement)
     {
-        // Broadcast na frontend (uPlot graf)
         await Clients.All.SendAsync("ReceiveMeasurement", measurement);
 
-        // Če snemamo, potisni v buffer za DatabaseWorker
         if (_buffer.CurrentSessionId.HasValue)
         {
             _buffer.Writer.TryWrite(measurement);

@@ -13,7 +13,7 @@ public class TelemetryBuffer
 
     public TelemetryBuffer()
     {
-        // Unbounded pomeni, da lahko sprejme ogromno podatkov brez čakanja
+        // Unbounded so producers never block waiting for the database to catch up
         _channel = Channel.CreateUnbounded<CanMeasurementDto>();
     }
 

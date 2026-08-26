@@ -20,7 +20,6 @@ public class TelemetryController : ControllerBase
     [HttpGet("sessions")]
     public async Task<IActionResult> GetSessions()
     {
-        // Samo bistveni podatki za "grd" seznam na frontendu
         var sessions = await _db.Sessions
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new 
@@ -44,14 +43,12 @@ public class TelemetryController : ControllerBase
         using var conn = new NpgsqlConnection(_db.Database.GetConnectionString());
         await conn.OpenAsync();
 
-        // 1. Determine the time range
         if (min == null || max == null)
         {
             var range = await conn.QuerySingleOrDefaultAsync<(DateTime? start, DateTime? end)>(
                 "SELECT MIN(\"Time\"), MAX(\"Time\") FROM \"Measurements\" WHERE \"SessionId\" = @sessionId",
                 new { sessionId });
 
-            // If no data exists, return empty arrays immediately
             if (range.start == null || range.end == null)
             {
                 return Ok(new[] { Array.Empty<double>(), Array.Empty<double>() });
@@ -64,15 +61,9 @@ public class TelemetryController : ControllerBase
         var startTime = DateTimeOffset.FromUnixTimeMilliseconds((long)(min * 1000)).UtcDateTime;
         var endTime = DateTimeOffset.FromUnixTimeMilliseconds((long)(max * 1000)).UtcDateTime;
 
-        // 2. Calculate bucket size
         var durationMs = (endTime - startTime).TotalMilliseconds;
         var bucketMs = Math.Max(1, durationMs / 2000);
-        
-        // Create the interval string: e.g. "20 milliseconds"
-        string interval = $"{bucketMs} milliseconds";
 
-        // 3. Updated Query using parameter for interval
-        // Note: We use the bucketed time as our X axis
         string sql = @"
             SELECT 
                 time_bucket(@interval, ""Time"") AS Bucket,
@@ -82,10 +73,9 @@ public class TelemetryController : ControllerBase
             GROUP BY Bucket
             ORDER BY Bucket ASC";
 
-        try 
+        try
         {
-            // Use an anonymous object to pass parameters
-            var data = await conn.QueryAsync<(DateTime Bucket, double Val)>(sql, 
+            var data = await conn.QueryAsync<(DateTime Bucket, double Val)>(sql,
                 new { interval = TimeSpan.FromMilliseconds(bucketMs), sessionId, startTime, endTime });
 
             var x = data.Select(d => ((DateTimeOffset)d.Bucket).ToUnixTimeMilliseconds() / 1000.0).ToArray();
@@ -95,7 +85,6 @@ public class TelemetryController : ControllerBase
         }
         catch (Exception ex)
         {
-            // This will help you see the REAL error in your console
             return BadRequest(ex.Message);
         }
     }

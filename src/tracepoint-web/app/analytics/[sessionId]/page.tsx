@@ -14,17 +14,15 @@ export default function AnalyticsPage() {
   const [chartData, setChartData] = useState<[number[], number[]]>([[], []]);
   const [loading, setLoading] = useState(true);
 
-  // Read zoom from URL
   const urlMin = searchParams.get('min');
   const urlMax = searchParams.get('max');
 
-  // Points display
   const [pointCount, setPointCount] = useState(0);
 
   const options = useMemo(() => ({
     width: 1000,
     height: 500,
-    title: `Seja: ${params.sessionId}`,
+    title: `Session: ${params.sessionId}`,
     series: [
         {},
         { label: "CAN Signal", stroke: "#3b82f6", width: 2 },
@@ -35,13 +33,12 @@ export default function AnalyticsPage() {
     },
     scales: {
         x: {
-            // If URL has min/max, apply them immediately
             min: urlMin ? parseFloat(urlMin) : undefined,
             max: urlMax ? parseFloat(urlMax) : undefined,
         }
     },
     hooks: {
-        // When user zooms, update the URL
+        // Sync the drag-to-zoom selection back into the URL so the view is shareable
         setSelect: [
             (u: any) => {
                 const min = u.posToVal(u.select.left, 'x').toFixed(4);
@@ -64,29 +61,27 @@ export default function AnalyticsPage() {
     const fetchHistory = async () => {
       setLoading(true);
       try {
-        // Build query string based on URL params
-        const query = (urlMin && urlMax) 
-          ? `?min=${urlMin}&max=${urlMax}` 
+        const query = (urlMin && urlMax)
+          ? `?min=${urlMin}&max=${urlMax}`
           : "";
-          
+
         const r = await fetch(`http://localhost:5247/api/telemetry/sessions/${params.sessionId}/measurements${query}`);
         const data = await r.json();
-        
+
         if (Array.isArray(data) && data.length === 2) {
           setChartData(data as [number[], number[]]);
-          // Track how many points the server sent
           setPointCount(data[0].length);
         }
       } catch (e) {
-        console.error("Napaka:", e);
+        console.error("Failed to load session data:", e);
       } finally {
         setLoading(false);
       }
     };
 
     if (params.sessionId) fetchHistory();
-    
-    // Depend on urlMin/urlMax so it refetches on zoom!
+
+    // urlMin/urlMax are deliberate deps so a zoom (which updates the URL) refetches at the new resolution
   }, [params.sessionId, urlMin, urlMax]);
 
   return (

@@ -13,7 +13,7 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Konfiguracija za Measurement (Composite Key za Hypertable podporo)
+        // Composite key required for TimescaleDB hypertable support
         modelBuilder.Entity<Measurement>()
             .HasKey(m => new { m.Time, m.Id });
 
@@ -21,7 +21,6 @@ public class AppDbContext : DbContext
             .Property(m => m.Id)
             .ValueGeneratedOnAdd();
 
-        // Relacija: Ena seja ima mnogo meritev
         modelBuilder.Entity<Measurement>()
             .HasOne(m => m.Session)
             .WithMany(s => s.Measurements)
