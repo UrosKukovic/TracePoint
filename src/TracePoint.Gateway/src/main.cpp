@@ -1,4 +1,5 @@
 #include "StatusLed.h"
+#include "CanBus.h"
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -22,10 +23,14 @@ const char* MQTT_TOPIC = "telemetry/binary";
 // Pins for ESP32-S3 N8R8
 #define CAN_TX_PIN GPIO_NUM_5
 #define CAN_RX_PIN GPIO_NUM_4
+#define CAN_SPEED 125
+#define CAN_QUEUE_SIZE 20
 #define RGB_PIN GPIO_NUM_38
 
-// object creation
+// LED object creation
 StatusLed statusLed(RGB_PIN, 30);
+// CanBus object creation
+CanBus canBus(CAN_TX_PIN, CAN_RX_PIN, ESP32Can.convertSpeed(CAN_SPEED), CAN_QUEUE_SIZE);
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -88,20 +93,6 @@ void setup()
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setBufferSize(4096);
 
-    // Initialize CAN Bus
-    ESP32Can.setPins(CAN_TX_PIN, CAN_RX_PIN);
-    ESP32Can.setSpeed(ESP32Can.convertSpeed(125));
-    ESP32Can.setRxQueueSize(20);
-
-    if (ESP32Can.begin())
-    {
-        Serial.println("GATEWAY: CAN Initialized at 125kbps");
-    }
-    else
-    {
-        Serial.println("GATEWAY: CAN Initialization Failed!");
-    }
-
     // Turn off the LED after setup
     statusLed.off();
 
@@ -162,7 +153,7 @@ void loop()
     CanFrame rxFrame;
 
     // Read CAN Frames (always store inside localBuffer)
-    if (ESP32Can.readFrame(rxFrame, 5))
+    if (canBus.readFrame(rxFrame, 5))
     {
         // blue LED upon CAN frame received
         statusLed.setColor(0,0,255);

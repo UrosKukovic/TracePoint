@@ -25,6 +25,13 @@ Log every confirmed fix here before anything else, including the commit message 
 - **Solution:** TBD.
 - **Explanation:** TBD once fixed.
 
+### No recovery path when CAN bus init fails
+- **Date found:** 2026-08-27
+- **Ticket:** TBD (likely Group 5 — CAN fault state alongside WiFi/MQTT's state machines — but not yet named in `REWORK.md`)
+- **Bug:** If `ESP32Can.begin()` fails at startup (now wrapped by `CanBus`'s constructor), both `Gateway` and `Sender` log a failure message and fall straight through into `loop()` forever. There's no retry, backoff, halt, or fault signal — `CanBus::readFrame()`/`writeFrame()` will just keep returning `false` for the life of the device, silently. This predates the RAII wrap (the old code did the same thing); wrapping it in `CanBus` didn't fix it, it just made the always-false behavior explicit instead of implicit.
+- **Solution:** TBD.
+- **Explanation:** TBD once fixed.
+
 ## Resolved
 
 ### Dead sine-wave code in Sender
