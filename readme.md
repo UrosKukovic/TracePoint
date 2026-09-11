@@ -2,8 +2,6 @@
 
 CAN bus telemetry system: read frames on an ESP32, stream them over MQTT, store sessions in PostgreSQL/TimescaleDB, and view live charts plus recorded history in a web dashboard.
 
-
-
 ## What it does
 
 1. A **CAN sender** (ESP32) publishes test frames on the bus.

@@ -1,5 +1,16 @@
 # TracePoint TODO
 
+## Firmware
+
+- [ ] Fix byte truncation on CAN signal decode — `Sender` writes a 16-bit little-endian value across CAN payload bytes 0–1, `Gateway` only reads byte 0
+- [ ] Bound the offline buffer — `MAX_LOCAL_FRAMES` is computed but never enforced against the `std::deque`'s growth during an outage
+- [ ] Send raw CAN payload bytes over MQTT so the API can do DBC decoding server-side (currently sends a pre-reduced `float` only, doesn't match `CanMeasurementDto`)
+- [ ] Move WiFi/MQTT credentials and broker IP out of source into an uncommitted config header
+- [ ] Remove/gate the leftover test-disconnect debug logic in the Gateway
+- [ ] Add host-side unit tests for the buffer and protocol encoding
+- [ ] MQTT over TLS; add application-layer payload authentication (HMAC/AEAD)
+- [ ] Add a real recovery path for CAN bus init failure (currently just logs and falls through to `loop()`)
+
 ## Hardware validation (next session)
 
 - [ ] Wire ESP32 Sender + CAN transceiver + ESP32-S3 Gateway on breadboard, CAN bus at 125 kbps
@@ -13,6 +24,5 @@
 
 - [ ] Wiring/schematic diagram of the CAN bus setup
 - [ ] Short demo GIF of the live dashboard updating in real time
-- [ ] "Skills demonstrated" section (separate from the Tech stack table)
 - [ ] "Known limitations / roadmap" section
 - [ ] Badges row (.NET/Next.js versions, license)
